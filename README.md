@@ -3,6 +3,29 @@
 `codex-mp` is a local CLI for switching Codex accounts by swapping
 `auth.json` profiles on disk.
 
+## Quick Start
+
+### 1. Install
+Choose one:
+- **Homebrew** (Recommended): `brew install BigCactusLabs/tap/codex-mp`
+- **Build from Source**: Run `make build` (Requires [Go 1.23+](https://go.dev/doc/install) installed)
+
+### 2. Startup
+Initialize your profiles directory:
+```bash
+codex-mp init
+```
+
+### 3. Activate
+Save your current login and start switching:
+```bash
+# Save current session
+codex-mp save work
+
+# Switch to profile
+codex-mp use work
+```
+
 It does not change your repos or tools. It only copies files under your Codex
 state directory.
 
@@ -144,5 +167,6 @@ codex-mp ui
 To update the Homebrew formula metadata from `VERSION`:
 
 ```bash
-./scripts/update_formula.sh <sha256>
+# Update local placeholder and (optionally) the live tap repo
+./scripts/update_formula.sh <sha256> [path/to/homebrew-tap]
 ```
