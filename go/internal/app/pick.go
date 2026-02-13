@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/BigCactusLabs/codex-multipass/internal/config"
+	"github.com/BigCactusLabs/codex-multipass/internal/ui"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
@@ -63,7 +64,7 @@ var pickCmd = &cobra.Command{
 					Options(options...).
 					Value(&selectedProfile),
 			),
-		)
+		).WithTheme(ui.CustomTheme())
 
 		form.WithKeyMap(func() *huh.KeyMap {
 			km := huh.NewDefaultKeyMap()

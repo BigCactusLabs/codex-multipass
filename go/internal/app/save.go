@@ -8,6 +8,7 @@ import (
 
 	"github.com/BigCactusLabs/codex-multipass/internal/config"
 	"github.com/BigCactusLabs/codex-multipass/internal/fs"
+	"github.com/BigCactusLabs/codex-multipass/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -52,7 +53,7 @@ var saveCmd = &cobra.Command{
 		if jsonOutput {
 			fmt.Printf(`{"ok":true,"action":"save","profile":"%s","path":"%s"}`+"\n", name, profilePath)
 		} else {
-			fmt.Printf("✓ Saved profile: %s\n", name)
+			ui.Success("Saved profile: %s", name)
 		}
 	},
 }
