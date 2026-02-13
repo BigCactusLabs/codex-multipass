@@ -1,4 +1,4 @@
-# Codex Switcher (Phase 1)
+# Codex Multipass (codex-mp) v0.1.0
 
 `codex-mp` is a local CLI for switching Codex accounts by swapping
 `auth.json` profiles on disk.

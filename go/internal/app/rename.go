@@ -15,7 +15,7 @@ var renameCmd = &cobra.Command{
 	Short: "Rename a profile",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 2 {
-			fail("Usage: codex-switch rename <old> <new>")
+			fail("Usage: codex-mp rename <old> <new>")
 		}
 		oldName := args[0]
 		newName := args[1]
@@ -39,7 +39,7 @@ var renameCmd = &cobra.Command{
 		}
 
 		// Acquire Lock
-		unlock, err := fs.Lock(filepath.Join(paths.CodexDir, ".codex-switch.lock"))
+		unlock, err := fs.Lock(filepath.Join(paths.CodexDir, ".codex-mp.lock"))
 		if err != nil {
 			fail("Failed to acquire lock: %v", err)
 		}
@@ -49,7 +49,7 @@ var renameCmd = &cobra.Command{
 		if err := os.Rename(oldPath, newPath); err != nil {
 			fail("Failed to rename profile: %v", err)
 		}
-		
+
 		// Ensure permissions (though rename preserves them usually)
 		os.Chmod(newPath, 0600)
 

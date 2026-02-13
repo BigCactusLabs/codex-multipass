@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Corruption/Edge Case test for codex-switch
+# Corruption/Edge Case test for codex-mp
 # Usage: ./tests/corrupt_storage_test.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

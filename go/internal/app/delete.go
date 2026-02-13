@@ -15,7 +15,7 @@ var deleteCmd = &cobra.Command{
 	Short: "Delete a profile",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
-			fail("Usage: codex-switch delete <name>")
+			fail("Usage: codex-mp delete <name>")
 		}
 		name := args[0]
 
@@ -31,7 +31,7 @@ var deleteCmd = &cobra.Command{
 		}
 
 		// Acquire Lock
-		unlock, err := fs.Lock(filepath.Join(paths.CodexDir, ".codex-switch.lock"))
+		unlock, err := fs.Lock(filepath.Join(paths.CodexDir, ".codex-mp.lock"))
 		if err != nil {
 			fail("Failed to acquire lock: %v", err)
 		}
