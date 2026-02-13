@@ -1,8 +1,8 @@
 class CodexMp < Formula
   desc "CLI for switching Codex auth profiles"
   homepage "https://github.com/BigCactusLabs/codex-multipass"
-  url "https://github.com/BigCactusLabs/codex-multipass/archive/refs/tags/v0.1.1.tar.gz"
-  sha256 "7502f64a5f3a75efe51a9a89a271e01fd67bd5519d8d355758e8a0a529cca698"
+  url "https://github.com/BigCactusLabs/codex-multipass/archive/refs/tags/v0.1.2.tar.gz"
+  sha256 "a3cbb2028de4dd3b02e48f837b6ea08a6221938d07bfd8f4c449c83ac980cf3a"
   license "MIT"
 
   head "https://github.com/BigCactusLabs/codex-multipass.git", branch: "main"
