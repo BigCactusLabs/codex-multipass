@@ -48,8 +48,8 @@ fi
 
 TMP_FILE="$(mktemp "$FORMULA_FILE.tmp.XXXXXX")"
 awk -v version="$VERSION" -v sha="$SHA256" '
-  /url "https:\/\/github\.com\/quinn\/multidex\/archive\/refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz"/ {
-    print "  url \"https://github.com/quinn/multidex/archive/refs/tags/v" version ".tar.gz\""
+  /url "https:\/\/github\.com\/BigCactusLabs\/codex-multipass\/archive\/refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz"/ {
+    print "  url \"https://github.com/BigCactusLabs/codex-multipass/archive/refs/tags/v" version ".tar.gz\""
     next
   }
   /sha256 "[0-9a-f]+"/ {

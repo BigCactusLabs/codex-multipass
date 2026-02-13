@@ -38,7 +38,7 @@ CODEX_HOME=/custom/path/.codex codex-switch path
 Install via Homebrew:
 
 ```bash
-brew install quinn/tap/codex-switch
+brew install BigCactusLabs/tap/codex-switch
 ```
 
 Or manually:
