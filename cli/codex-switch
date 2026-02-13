@@ -1,0 +1,281 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
+AUTH="$CODEX_DIR/auth.json"
+PROFILES_DIR="$CODEX_DIR/profiles"
+
+# ── Color & icon setup (disabled when piped) ──────────────────────────
+IS_TTY=false
+if [[ -t 1 ]]; then
+  IS_TTY=true
+  RED=$'\033[0;31m'    GREEN=$'\033[0;32m'
+  YELLOW=$'\033[0;33m' CYAN=$'\033[0;36m'
+  DIM=$'\033[2m'       BOLD=$'\033[1m'
+  RESET=$'\033[0m'
+else
+  RED='' GREEN='' YELLOW='' CYAN='' DIM='' BOLD='' RESET=''
+fi
+
+# Unicode glyphs
+ICO_BRAND="✦"
+ICO_OK="✓"
+ICO_FAIL="✗"
+ICO_ARROW="→"
+ICO_ZAP="⚡"
+ICO_KEY="🔑"
+ICO_DIR="📁"
+ICO_ACTIVE="▸"
+
+# ── Helpers ───────────────────────────────────────────────────────────
+
+banner() {
+  echo ""
+  echo "${CYAN}${BOLD}  ${ICO_BRAND} codex-switch${RESET}  ${DIM}— profile manager${RESET}"
+  echo "${DIM}  ─────────────────────────────${RESET}"
+}
+
+die() {
+  echo "${RED}${ICO_FAIL} Error:${RESET} $1" >&2
+  exit "${2:-1}"
+}
+
+info() {
+  echo "${GREEN}${ICO_OK}${RESET} $1"
+}
+
+# Get the SHA-256 fingerprint of a file (short, first 12 chars)
+_fingerprint() {
+  local f="$1"
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$f" | awk '{print $1}'
+  else
+    openssl dgst -sha256 "$f" | awk '{print $2}'
+  fi
+}
+
+_short_fp() {
+  _fingerprint "$1" | cut -c1-12
+}
+
+# ── Validation ────────────────────────────────────────────────────────
+
+validate_name() {
+  local name="$1"
+  if [[ -z "$name" ]]; then
+    echo "${RED}${ICO_FAIL} Profile name is required.${RESET}" >&2
+    usage
+    exit 2
+  fi
+
+  if [[ ! "$name" =~ ^[A-Za-z0-9._-]+$ ]]; then
+    die "Invalid profile name: ${BOLD}$name${RESET} ${DIM}(allowed: A-Z a-z 0-9 . _ -)${RESET}" 2
+  fi
+}
+
+perm_lockdown() {
+  mkdir -p "$PROFILES_DIR"
+  chmod 700 "$CODEX_DIR" || true
+  chmod 700 "$PROFILES_DIR" || true
+  [[ -f "$AUTH" ]] && chmod 600 "$AUTH" || true
+}
+
+# ── Usage / Help ──────────────────────────────────────────────────────
+
+usage() {
+  banner
+  echo ""
+  echo "  ${BOLD}Usage:${RESET}"
+  echo ""
+  echo "    ${GREEN}init${RESET}                  Set up profiles directory"
+  echo "    ${GREEN}save${RESET}  ${DIM}<name>${RESET}          Save current auth as a profile"
+  echo "    ${GREEN}use${RESET}   ${DIM}<name>${RESET}          Switch to a saved profile"
+  echo "    ${GREEN}list${RESET}                  List saved profiles"
+  echo "    ${GREEN}who${RESET}                   Show current auth fingerprint"
+  echo "    ${GREEN}path${RESET}                  Show resolved paths"
+  echo "    ${GREEN}delete${RESET} ${DIM}<name>${RESET}         Delete a profile"
+  echo "    ${GREEN}rename${RESET} ${DIM}<old> <new>${RESET}    Rename a profile"
+  echo "    ${GREEN}pick${RESET}                  Interactive profile selector"
+  echo "    ${GREEN}help${RESET}                  Show this help"
+  echo ""
+}
+
+# ── Commands ──────────────────────────────────────────────────────────
+
+cmd="${1:-}"
+case "$cmd" in
+  init)
+    perm_lockdown
+    info "Initialized profiles directory: ${DIM}$PROFILES_DIR${RESET}"
+    ;;
+
+  save)
+    name="${2:-}"
+    validate_name "$name"
+    [[ -f "$AUTH" ]] || {
+      die "Missing auth file: ${BOLD}$AUTH${RESET}\n   ${DIM}Hint: Run 'codex login' to create it.${RESET}"
+    }
+    perm_lockdown
+    cp -f "$AUTH" "$PROFILES_DIR/$name.json"
+    chmod 600 "$PROFILES_DIR/$name.json" || true
+    info "Saved profile: ${BOLD}$name${RESET}"
+    ;;
+
+  use)
+    name="${2:-}"
+    validate_name "$name"
+    profile_path="$PROFILES_DIR/$name.json"
+    [[ -f "$profile_path" ]] || {
+      die "Profile not found: ${BOLD}$name${RESET}\n   ${DIM}Looked in: $profile_path${RESET}"
+    }
+    perm_lockdown
+    cp -f "$profile_path" "$AUTH"
+    chmod 600 "$AUTH" || true
+    echo "${CYAN}${ICO_ZAP} Switched ${ICO_ARROW} ${BOLD}$name${RESET}"
+    ;;
+
+  list)
+    [[ -d "$PROFILES_DIR" ]] || exit 0
+    profiles=$(ls -1 "$PROFILES_DIR" 2>/dev/null | sed -n 's/\.json$//p' | sort)
+    [[ -z "$profiles" ]] && exit 0
+
+    # Plain output when piped (preserves script/test compatibility)
+    if [[ "$IS_TTY" == false ]]; then
+      echo "$profiles"
+      exit 0
+    fi
+
+    # Determine active profile fingerprint
+    active_fp=""
+    if [[ -f "$AUTH" ]]; then
+      active_fp=$(_fingerprint "$AUTH")
+    fi
+
+    echo ""
+    echo "  ${BOLD}Profiles${RESET}"
+    echo "  ${DIM}────────────────────────────${RESET}"
+    while IFS= read -r p; do
+      pfile="$PROFILES_DIR/$p.json"
+      pfp=$(_fingerprint "$pfile")
+      short="${pfp:0:12}"
+
+      if [[ "$pfp" == "$active_fp" ]]; then
+        echo "  ${GREEN}${ICO_ACTIVE} ${BOLD}$p${RESET}  ${DIM}$short${RESET}  ${GREEN}● active${RESET}"
+      else
+        echo "    ${p}  ${DIM}$short${RESET}"
+      fi
+    done <<< "$profiles"
+    echo ""
+    ;;
+
+  who)
+    [[ -f "$AUTH" ]] || die "Not logged in ${DIM}(missing $AUTH)${RESET}"
+    fp=$(_fingerprint "$AUTH")
+    if [[ "$IS_TTY" == true ]]; then
+      echo "${ICO_KEY}  ${BOLD}$fp${RESET}"
+    else
+      echo "$fp"
+    fi
+    ;;
+
+  path)
+    if [[ "$IS_TTY" == false ]]; then
+      echo "CODEX_HOME=${CODEX_HOME:-}"
+      echo "CODEX_DIR=$CODEX_DIR"
+      echo "AUTH=$AUTH"
+      echo "PROFILES_DIR=$PROFILES_DIR"
+    else
+      echo ""
+      echo "  ${BOLD}Resolved Paths${RESET}"
+      echo "  ${DIM}────────────────────────────${RESET}"
+      echo "  ${CYAN}CODEX_HOME${RESET}     ${DIM}=${RESET} ${CODEX_HOME:-${DIM}(not set)${RESET}}"
+      echo "  ${CYAN}CODEX_DIR${RESET}      ${DIM}=${RESET} $CODEX_DIR"
+      echo "  ${CYAN}AUTH${RESET}           ${DIM}=${RESET} $AUTH"
+      echo "  ${CYAN}PROFILES_DIR${RESET}   ${DIM}=${RESET} $PROFILES_DIR"
+      echo ""
+    fi
+    ;;
+
+  delete)
+    name="${2:-}"
+    validate_name "$name"
+    profile_path="$PROFILES_DIR/$name.json"
+    [[ -f "$profile_path" ]] || die "Profile not found: ${BOLD}$name${RESET}"
+    rm -f "$profile_path"
+    echo "${YELLOW}${ICO_FAIL} Deleted profile: ${BOLD}$name${RESET}"
+    ;;
+
+  rename)
+    old_name="${2:-}"
+    new_name="${3:-}"
+    validate_name "$old_name"
+    validate_name "$new_name"
+    old_path="$PROFILES_DIR/$old_name.json"
+    new_path="$PROFILES_DIR/$new_name.json"
+    [[ -f "$old_path" ]] || die "Profile not found: ${BOLD}$old_name${RESET}"
+    if [[ -f "$new_path" ]]; then
+      die "Profile already exists: ${BOLD}$new_name${RESET}"
+    fi
+    mv "$old_path" "$new_path"
+    echo "${CYAN}${ICO_ARROW} Renamed: ${BOLD}$old_name${RESET} ${ICO_ARROW} ${BOLD}$new_name${RESET}"
+    ;;
+
+  ui|pick)
+    # Get profile list
+    profiles=($("$0" list 2>/dev/null | sed 's/^[[:space:]]*//' | sed '/^$/d' | sed '/^Profiles$/d' | sed '/^────/d' | awk '{print $1}' | sed 's/^[▸●]//'))
+    # Fallback: re-read from disk
+    if [[ ${#profiles[@]} -eq 0 ]]; then
+      if [[ -d "$PROFILES_DIR" ]]; then
+        profiles=($(ls -1 "$PROFILES_DIR" 2>/dev/null | sed -n 's/\.json$//p' | sort))
+      fi
+    fi
+
+    if [[ ${#profiles[@]} -eq 0 ]]; then
+      die "No profiles found." 1
+    fi
+
+    banner
+    echo ""
+
+    selected=""
+    if command -v fzf >/dev/null 2>&1; then
+      selected=$(printf "%s\n" "${profiles[@]}" | fzf \
+        --height 12 \
+        --border rounded \
+        --header "  ${ICO_ZAP} Pick a profile" \
+        --prompt "  ${ICO_ARROW} " \
+        --pointer "${ICO_ACTIVE}" \
+        --color "header:cyan,pointer:green,prompt:cyan" \
+        --ansi) || exit 0
+    else
+      echo "  ${BOLD}Select a profile:${RESET}"
+      echo ""
+      PS3="  ${CYAN}${ICO_ARROW}${RESET} Choice [1-${#profiles[@]}, or 'q' to quit]: "
+      select opt in "${profiles[@]}"; do
+        if [[ -n "$opt" ]]; then
+          selected="$opt"
+          break
+        elif [[ "$REPLY" == "q" ]]; then
+          echo ""
+          echo "  ${DIM}Canceled.${RESET}"
+          exit 0
+        else
+          echo "  ${RED}Invalid selection: $REPLY${RESET}"
+        fi
+      done
+    fi
+
+    if [[ -n "$selected" ]]; then
+      "$0" use "$selected"
+      echo "${DIM}  fingerprint: $("$0" who 2>/dev/null | sed 's/^[^[:space:]]* *//')${RESET}"
+    fi
+    ;;
+
+  ""|help|-h|--help)
+    usage
+    ;;
+
+  *)
+    die "Unknown command: ${BOLD}$cmd${RESET}" 2
+    ;;
+esac
