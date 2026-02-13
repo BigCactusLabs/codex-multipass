@@ -1,6 +1,6 @@
 # Codex Switcher (Phase 1)
 
-`codex-switch` is a local CLI for switching Codex accounts by swapping
+`codex-mp` is a local CLI for switching Codex accounts by swapping
 `auth.json` profiles on disk.
 
 It does not change your repos or tools. It only copies files under your Codex
@@ -10,7 +10,7 @@ state directory.
 
 - All data stays local.
 - The CLI never prints token contents.
-- `codex-switch who` prints only a SHA-256 fingerprint of `auth.json`.
+- `codex-mp who` prints only a SHA-256 fingerprint of `auth.json`.
 - Atomic writes for `save` and `use` (temporary file + rename).
 - Process lock for profile mutations to avoid concurrent-write races.
 - Permission hardening on every write (fails closed if hardening fails):
@@ -30,44 +30,50 @@ By default, Codex state is resolved from:
 If `CODEX_HOME` is set, it overrides the base directory:
 
 ```bash
-CODEX_HOME=/custom/path/.codex codex-switch path
+CODEX_HOME=/custom/path/.codex codex-mp path
 ```
 
 ## Installation
 
-Install via Homebrew:
+### From Source (Go)
+
+Prerequisites: Go 1.23+
 
 ```bash
-brew install BigCactusLabs/tap/codex-switch
+git clone https://github.com/BigCactusLabs/codex-multipass.git
+cd codex-multipass
+make build
+# Binary is at ./codex-mp
 ```
 
-Or manually:
+### Homebrew
 
-1. Copy `cli/codex-switch` to a directory in your `PATH`.
-2. Make it executable: `chmod +x codex-switch`.
+```bash
+brew install BigCactusLabs/tap/codex-mp
+```
 
 ## Commands
 
 ```bash
-codex-switch init
-codex-switch save <name>
-codex-switch use <name>
-codex-switch list
-codex-switch who
-codex-switch path
-codex-switch delete <name>
-codex-switch rename <old> <new>
-codex-switch pick
-codex-switch ui
-codex-switch version
-codex-switch help
+codex-mp init
+codex-mp save <name>
+codex-mp use <name>
+codex-mp list
+codex-mp who
+codex-mp path
+codex-mp delete <name>
+codex-mp rename <old> <new>
+codex-mp pick
+codex-mp ui
+codex-mp version
+codex-mp help
 ```
 
 Global output flags:
 
 ```bash
-codex-switch --plain <command>
-codex-switch --json <command>
+codex-mp --plain <command>
+codex-mp --json <command>
 ```
 
 ## Phase 1 usage
@@ -75,38 +81,38 @@ codex-switch --json <command>
 Initialize profiles directory:
 
 ```bash
-codex-switch init
+codex-mp init
 ```
 
 Save the current login as a profile:
 
 ```bash
 codex login
-codex-switch save work
+codex-mp save work
 ```
 
 Switch to a saved profile:
 
 ```bash
-codex-switch use work
+codex-mp use work
 ```
 
 List saved profiles:
 
 ```bash
-codex-switch list
+codex-mp list
 ```
 
 Print current auth fingerprint:
 
 ```bash
-codex-switch who
+codex-mp who
 ```
 
 Show resolved paths:
 
 ```bash
-codex-switch path
+codex-mp path
 ```
 
 ## Phase 2 usage (Management + UI)
@@ -114,21 +120,21 @@ codex-switch path
 Delete a profile:
 
 ```bash
-codex-switch delete old-work
+codex-mp delete old-work
 ```
 
 Rename a profile:
 
 ```bash
-codex-switch rename personal home
+codex-mp rename personal home
 ```
 
 Interactive selection (TUI):
 
 ```bash
-codex-switch pick
+codex-mp pick
 # or
-codex-switch ui
+codex-mp ui
 ```
 
 ## Release metadata

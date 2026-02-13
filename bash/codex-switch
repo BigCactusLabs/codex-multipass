@@ -151,7 +151,7 @@ release_lock() {
 }
 
 acquire_lock() {
-  mkdir -p "$CODEX_DIR" || die "Failed to create CODEX directory: $CODEX_DIR"
+  mkdir -p -m 700 "$CODEX_DIR" || die "Failed to create CODEX directory: $CODEX_DIR"
 
   local waited=0
   while ! mkdir "$LOCK_DIR" 2>/dev/null; do
@@ -186,7 +186,7 @@ atomic_copy() {
   local tmp_file
 
   target_dir="$(dirname "$target_file")"
-  mkdir -p "$target_dir" || die "Failed to create directory: $target_dir"
+  mkdir -p -m 700 "$target_dir" || die "Failed to create directory: $target_dir"
   tmp_file="$(mktemp "$target_dir/.codex-switch.tmp.XXXXXX")" || die "Failed to create temporary file in $target_dir"
 
   cp -f "$source_file" "$tmp_file" || {

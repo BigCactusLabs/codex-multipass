@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2026-02-13
 
 ### Added
-- Initial public release of `codex-switch` CLI.
+- Initial public release of `codex-mp` CLI.
 - Commands: `init`, `save`, `use`, `list`, `who`, `path`, `delete`, `rename`, `version`.
 - Interactive TUI mode (`pick`, `ui`).
 - Atomic profile switching with permission hardening.
