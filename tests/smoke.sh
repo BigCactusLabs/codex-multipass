@@ -5,7 +5,8 @@ set -euo pipefail
 # Usage: ./tests/smoke.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export CODEX_HOME="$(mktemp -d)"
+CODEX_HOME="$(mktemp -d)"
+export CODEX_HOME
 CODEX_SWITCH="$SCRIPT_DIR/../cli/codex-switch"
 
 echo "Using temporary CODEX_HOME: $CODEX_HOME"
@@ -96,5 +97,30 @@ set +e
 "$CODEX_SWITCH" rename job "invalid name!" 2>/dev/null
 [[ $? -eq 2 ]]
 set -e
+
+# 13. JSON output for mutating commands
+echo "Testing: --json save/use/rename/delete"
+echo '{"token": "json-token"}' > "$CODEX_HOME/auth.json"
+SAVE_JSON=$("$CODEX_SWITCH" --json save json-profile)
+echo "$SAVE_JSON" | grep '"ok":true' > /dev/null
+echo "$SAVE_JSON" | grep '"action":"save"' > /dev/null
+
+USE_JSON=$("$CODEX_SWITCH" --json use json-profile)
+echo "$USE_JSON" | grep '"action":"use"' > /dev/null
+grep "json-token" "$CODEX_HOME/auth.json" > /dev/null
+
+RENAME_JSON=$("$CODEX_SWITCH" --json rename json-profile json-profile-2)
+echo "$RENAME_JSON" | grep '"action":"rename"' > /dev/null
+[[ -f "$CODEX_HOME/profiles/json-profile-2.json" ]]
+
+DELETE_JSON=$("$CODEX_SWITCH" --json delete json-profile-2)
+echo "$DELETE_JSON" | grep '"action":"delete"' > /dev/null
+[[ ! -f "$CODEX_HOME/profiles/json-profile-2.json" ]]
+
+# 14. version command uses VERSION file
+echo "Testing: version"
+EXPECTED_VERSION=$(tr -d '[:space:]' < "$SCRIPT_DIR/../VERSION")
+ACTUAL_VERSION=$("$CODEX_SWITCH" version)
+[[ "$ACTUAL_VERSION" == "$EXPECTED_VERSION" ]]
 
 echo "Phase 2 smoke tests PASSED!"
