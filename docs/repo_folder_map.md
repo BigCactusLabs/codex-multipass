@@ -3,18 +3,22 @@
 Generated file. Do not edit manually.
 
 ## Metadata
-- map_version: 0.0.2
+- map_version: 0.0.5
 - bump: patch
-- summary: Refresh folder map after CLI hardening and release workflow updates
-- directories: 8
-- files: 12
+- summary: Post open-source cleanup
+- directories: 10
+- files: 17
 
 ## Tree
 ```text
 .
+├── .github/
+│   └── workflows/
+│       └── ci.yml
 ├── cli/
 │   └── codex-switch
 ├── docs/
+│   └── open_source_refactor_plan.md
 ├── homebrew/
 │   └── Formula/
 │       └── codex-switch.rb
@@ -28,8 +32,11 @@ Generated file. Do not edit manually.
 │   └── docs/
 │       └── generate_folder_map.py
 ├── .gitattributes
-├── codex-switch-0.1.0.tar.gz
-├── codex_switcher_engineer_handoff.md
+├── .gitignore
+├── CHANGELOG.md
+├── CODE_OF_CONDUCT.md
+├── CONTRIBUTING.md
+├── LICENSE
 ├── README.md
 └── VERSION
 ```
