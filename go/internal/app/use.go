@@ -15,7 +15,7 @@ var useCmd = &cobra.Command{
 	Short: "Switch to a saved profile",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
-			fail("Usage: codex-switch use <name>")
+			fail("Usage: codex-mp use <name>")
 		}
 		name := args[0]
 
@@ -31,7 +31,7 @@ var useCmd = &cobra.Command{
 		}
 
 		// Acquire Lock
-		unlock, err := fs.Lock(filepath.Join(paths.CodexDir, ".codex-switch.lock"))
+		unlock, err := fs.Lock(filepath.Join(paths.CodexDir, ".codex-mp.lock"))
 		if err != nil {
 			fail("Failed to acquire lock: %v", err)
 		}
