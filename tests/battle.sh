@@ -126,8 +126,9 @@ chmod 000 "$PERM_DIR"
 export CODEX_HOME="$PERM_DIR"
 set +e
 "$CODEX_SWITCH" init 2>/dev/null
-[[ $? -ne 0 ]]
+RET=$?
 set -e
+[[ $RET -ne 0 ]]
 # Restore permissions for cleanup
 chmod 700 "$PERM_DIR"
 echo "✓ Directory permissions error passed"

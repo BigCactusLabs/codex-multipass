@@ -11,7 +11,9 @@ state directory.
 - All data stays local.
 - The CLI never prints token contents.
 - `codex-switch who` prints only a SHA-256 fingerprint of `auth.json`.
-- Best-effort permission hardening on every write:
+- Atomic writes for `save` and `use` (temporary file + rename).
+- Process lock for profile mutations to avoid concurrent-write races.
+- Permission hardening on every write (fails closed if hardening fails):
   - `CODEX_DIR` mode `700`
   - `profiles/` mode `700`
   - `auth.json` mode `600`
@@ -47,6 +49,9 @@ Or manually:
 ## Commands
 
 ```bash
+codex-switch init
+codex-switch save <name>
+codex-switch use <name>
 codex-switch list
 codex-switch who
 codex-switch path
@@ -54,7 +59,15 @@ codex-switch delete <name>
 codex-switch rename <old> <new>
 codex-switch pick
 codex-switch ui
+codex-switch version
 codex-switch help
+```
+
+Global output flags:
+
+```bash
+codex-switch --plain <command>
+codex-switch --json <command>
 ```
 
 ## Phase 1 usage
@@ -116,4 +129,14 @@ Interactive selection (TUI):
 codex-switch pick
 # or
 codex-switch ui
+```
+
+## Release metadata
+
+`VERSION` is the single source of truth for release version.
+
+To update the Homebrew formula metadata from `VERSION`:
+
+```bash
+./scripts/update_formula.sh <sha256>
 ```
