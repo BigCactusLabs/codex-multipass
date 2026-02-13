@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 VERSION_FILE="$ROOT_DIR/VERSION"
-FORMULA_FILE="$ROOT_DIR/homebrew/Formula/codex-switch.rb"
+FORMULA_FILE="$ROOT_DIR/homebrew/Formula/codex-mp.rb"
 
 usage() {
   cat <<'USAGE'

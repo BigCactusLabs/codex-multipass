@@ -183,6 +183,10 @@ def main() -> int:
     output_rel = Path(args.output)
     output_path = (repo_root / output_rel).resolve()
 
+    if not str(output_path).startswith(str(repo_root)):
+        print(f"Error: Output path must be within repository root: {repo_root}", file=sys.stderr)
+        return 2
+
     if not repo_root.is_dir():
         print(f"Repository root does not exist: {repo_root}", file=sys.stderr)
         return 2

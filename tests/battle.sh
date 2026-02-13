@@ -5,7 +5,7 @@ set -euo pipefail
 # Usage: ./tests/battle.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CODEX_SWITCH="$SCRIPT_DIR/../cli/codex-switch"
+CODEX_MP="${CODEX_MP:-$SCRIPT_DIR/../codex-mp}"
 
 # Use a base temp dir for all tests
 BASE_TEMP=$(mktemp -d)
@@ -23,14 +23,14 @@ SPACE_DIR="$BASE_TEMP/my codex dir"
 mkdir -p "$SPACE_DIR"
 export CODEX_HOME="$SPACE_DIR"
 
-"$CODEX_SWITCH" init
+"$CODEX_MP" init
 [[ -d "$SPACE_DIR/profiles" ]] || exit 1
 
 echo '{"token": "space-token"}' > "$SPACE_DIR/auth.json"
-"$CODEX_SWITCH" save "myprofile" # Note: cli validates name, spaces are NOT allowed in profile names per script
+"$CODEX_MP" save "myprofile" # Note: cli validates name, spaces are NOT allowed in profile names per script
 [[ -f "$SPACE_DIR/profiles/myprofile.json" ]] || exit 1
 
-"$CODEX_SWITCH" use "myprofile"
+"$CODEX_MP" use "myprofile"
 grep "space-token" "$SPACE_DIR/auth.json" > /dev/null || exit 1
 echo "✓ Paths with spaces passed"
 
@@ -44,14 +44,14 @@ export CODEX_HOME="$SYM_DIR/codex_home"
 echo '{"token": "link-token"}' > "$SYM_DIR/real_storage/auth.json"
 ln -s "$SYM_DIR/real_storage/auth.json" "$CODEX_HOME/auth.json"
 
-"$CODEX_SWITCH" init
-"$CODEX_SWITCH" save linked
+"$CODEX_MP" init
+"$CODEX_MP" save linked
 # cp -f should have copied the content to profiles/linked.json
 grep "link-token" "$CODEX_HOME/profiles/linked.json" > /dev/null || exit 1
 
 # Now use a different profile and see if it breaks the link
 echo '{"token": "new-token"}' > "$CODEX_HOME/profiles/new.json"
-"$CODEX_SWITCH" use new
+"$CODEX_MP" use new
 grep "new-token" "$CODEX_HOME/auth.json" > /dev/null || exit 1
 
 if [[ -L "$CODEX_HOME/auth.json" ]]; then
@@ -68,11 +68,11 @@ LARGE_DIR="$BASE_TEMP/large_test"
 mkdir -p "$LARGE_DIR"
 export CODEX_HOME="$LARGE_DIR"
 dd if=/dev/urandom of="$CODEX_HOME/auth.json" bs=1M count=1 2>/dev/null
-"$CODEX_SWITCH" init
-"$CODEX_SWITCH" save huge
+"$CODEX_MP" init
+"$CODEX_MP" save huge
 [[ -f "$CODEX_HOME/profiles/huge.json" ]] || exit 1
 # Fingerprint should still work
-FP=$("$CODEX_SWITCH" who)
+FP=$("$CODEX_MP" who)
 [[ -n "$FP" ]] || exit 1
 echo "✓ Large file test passed"
 
@@ -81,15 +81,15 @@ echo "--- Test: Read-only profiles ---"
 RO_DIR="$BASE_TEMP/ro_test"
 mkdir -p "$RO_DIR"
 export CODEX_HOME="$RO_DIR"
-"$CODEX_SWITCH" init
+"$CODEX_MP" init
 echo '{"token": "ro-token"}' > "$RO_DIR/auth.json"
-"$CODEX_SWITCH" save ro-profile
+"$CODEX_MP" save ro-profile
 chmod 400 "$RO_DIR/profiles/ro-profile.json"
 
 # Switch away
 echo '{"token": "temp"}' > "$RO_DIR/auth.json"
 # Switch back - should work as cp can read it
-"$CODEX_SWITCH" use ro-profile
+"$CODEX_MP" use ro-profile
 grep "ro-token" "$RO_DIR/auth.json" > /dev/null || exit 1
 echo "✓ Read-only profile test passed"
 
@@ -98,11 +98,11 @@ echo "--- Test: Overwriting profile ---"
 OVR_DIR="$BASE_TEMP/ovr_test"
 mkdir -p "$OVR_DIR"
 export CODEX_HOME="$OVR_DIR"
-"$CODEX_SWITCH" init
+"$CODEX_MP" init
 echo '{"token": "v1"}' > "$OVR_DIR/auth.json"
-"$CODEX_SWITCH" save p1
+"$CODEX_MP" save p1
 echo '{"token": "v2"}' > "$OVR_DIR/auth.json"
-"$CODEX_SWITCH" save p1
+"$CODEX_MP" save p1
 grep "v2" "$OVR_DIR/profiles/p1.json" > /dev/null || exit 1
 echo "✓ Overwrite test passed"
 
@@ -111,11 +111,11 @@ echo "--- Test: Malformed JSON list ---"
 MAL_DIR="$BASE_TEMP/mal_test"
 mkdir -p "$MAL_DIR"
 export CODEX_HOME="$MAL_DIR"
-"$CODEX_SWITCH" init
+"$CODEX_MP" init
 echo 'not json but valid token' > "$MAL_DIR/auth.json"
-"$CODEX_SWITCH" save plain
+"$CODEX_MP" save plain
 # List should show it without crashing
-IS_TTY=true "$CODEX_SWITCH" list > /dev/null
+IS_TTY=true "$CODEX_MP" list > /dev/null
 echo "✓ Malformed JSON list passed"
 
 # 7. Directory permissions error
@@ -125,7 +125,7 @@ mkdir -p "$PERM_DIR"
 chmod 000 "$PERM_DIR"
 export CODEX_HOME="$PERM_DIR"
 set +e
-"$CODEX_SWITCH" init 2>/dev/null
+"$CODEX_MP" init 2>/dev/null
 RET=$?
 set -e
 [[ $RET -ne 0 ]]
@@ -138,9 +138,9 @@ echo "--- Test: Delete non-existent ---"
 DN_DIR="$BASE_TEMP/dn_test"
 mkdir -p "$DN_DIR"
 export CODEX_HOME="$DN_DIR"
-"$CODEX_SWITCH" init
+"$CODEX_MP" init
 set +e
-"$CODEX_SWITCH" delete "ghost" 2>/dev/null
+"$CODEX_MP" delete "ghost" 2>/dev/null
 RET=$?
 set -e
 [[ $RET -eq 1 ]]
@@ -151,9 +151,9 @@ echo "--- Test: Rename non-existent ---"
 RN_DIR="$BASE_TEMP/rn_test"
 mkdir -p "$RN_DIR"
 export CODEX_HOME="$RN_DIR"
-"$CODEX_SWITCH" init
+"$CODEX_MP" init
 set +e
-"$CODEX_SWITCH" rename "ghost" "real" 2>/dev/null
+"$CODEX_MP" rename "ghost" "real" 2>/dev/null
 RET=$?
 set -e
 [[ $RET -eq 1 ]]
