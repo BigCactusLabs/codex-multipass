@@ -8,7 +8,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "codex-switch",
+	Use:   "codex-mp",
 	Short: "Codex Profile Manager",
 	Long:  `A robust CLI for managing and switching Codex authentication profiles.`,
 	Run: func(cmd *cobra.Command, args []string) {
