@@ -11,8 +11,11 @@ We welcome contributions! The project is written in **Go**.
 ## Project Structure
 
 - `go/cmd/codex-mp`: Main entry point.
-- `go/internal/app`: CLI commands and logic.
-- `go/internal/model`: Data structures.
+
+- `go/internal/app`: CLI commands and wiring.
+- `go/internal/profile`: Core profile management logic.
+- `go/internal/config`: Configuration handling.
+- `go/internal/ui`: User interface components.
 - `go/internal/fs`: Atomic file system operations.
 - `bash/`: Original Bash implementation (legacy/reference).
 - `tests/`: Integration tests (Bash scripts).

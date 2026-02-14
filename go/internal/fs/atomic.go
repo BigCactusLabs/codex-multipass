@@ -15,6 +15,10 @@ import (
 func AtomicWriteJSON(path string, data any, perm os.FileMode) error {
 	dir := filepath.Dir(path)
 
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return fmt.Errorf("failed to create target directory: %w", err)
+	}
+
 	tmpFile, err := os.CreateTemp(dir, ".tmp-*")
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
@@ -53,6 +57,10 @@ func AtomicCopy(src, dst string, perm os.FileMode) error {
 	defer sourceFile.Close()
 
 	dir := filepath.Dir(dst)
+
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return fmt.Errorf("failed to create target directory: %w", err)
+	}
 
 	tmpFile, err := os.CreateTemp(dir, ".tmp-*")
 	if err != nil {

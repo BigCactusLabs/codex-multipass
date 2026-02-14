@@ -10,19 +10,18 @@ Choose one:
 - **Homebrew** (Recommended): `brew install BigCactusLabs/tap/codex-mp`
 - **Build from Source**: Run `make build` (Requires [Go 1.23+](https://go.dev/doc/install) installed)
 
-### 2. Startup
-Initialize your profiles directory:
+### 2. Usage
 ```bash
+# Initialize
 codex-mp init
-```
 
-### 3. Activate
-Save your current login and start switching:
-```bash
 # Save current session
 codex-mp save work
 
-# Switch to profile
+# Switch (Interactive)
+codex-mp ui
+
+# Switch (Command)
 codex-mp use work
 ```
 
@@ -99,65 +98,54 @@ codex-mp --plain <command>
 codex-mp --json <command>
 ```
 
-## Phase 1 usage
+## Usage
 
-Initialize profiles directory:
-
+### 1. Initialize
+Set up the profiles directory:
 ```bash
 codex-mp init
 ```
 
-Save the current login as a profile:
-
+### 2. Save Profile
+Save your current cached login as a profile:
 ```bash
 codex login
 codex-mp save work
 ```
 
+### 3. Switch Profile
 Switch to a saved profile:
-
 ```bash
 codex-mp use work
 ```
 
-List saved profiles:
+### 4. Interactive Selection (TUI)
+Select a profile from a list:
+```bash
+codex-mp ui
+# or
+codex-mp pick
+```
 
+### 5. Manage Profiles
+List, delete, or rename profiles:
 ```bash
 codex-mp list
-```
-
-Print current auth fingerprint:
-
-```bash
-codex-mp who
-```
-
-Show resolved paths:
-
-```bash
-codex-mp path
-```
-
-## Phase 2 usage (Management + UI)
-
-Delete a profile:
-
-```bash
 codex-mp delete old-work
-```
-
-Rename a profile:
-
-```bash
 codex-mp rename personal home
 ```
 
-Interactive selection (TUI):
-
+### 6. Inspect
+Check current auth fingerprint or resolved paths:
 ```bash
-codex-mp pick
-# or
-codex-mp ui
+codex-mp who
+codex-mp path
+```
+
+### 7. Shell Completion
+Generate completion script for your shell (bash, zsh, fish, powershell):
+```bash
+codex-mp completion zsh > /usr/local/share/zsh/site-functions/_codex-mp
 ```
 
 ## Release metadata
