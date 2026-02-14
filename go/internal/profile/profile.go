@@ -14,6 +14,23 @@ import (
 	"github.com/BigCactusLabs/codex-multipass/internal/fs"
 )
 
+// EnsureInitialized ensures that the profiles directory exists and has correct permissions.
+func EnsureInitialized(paths config.Paths) error {
+	if err := os.MkdirAll(paths.ProfilesDir, 0700); err != nil {
+		return fmt.Errorf("failed to create profiles directory: %w", err)
+	}
+
+	// Enforce 0700 on CodexDir and ProfilesDir explicitly
+	if err := os.Chmod(paths.CodexDir, 0700); err != nil {
+		return fmt.Errorf("failed to set permissions on %s: %w", paths.CodexDir, err)
+	}
+	if err := os.Chmod(paths.ProfilesDir, 0700); err != nil {
+		return fmt.Errorf("failed to set permissions on %s: %w", paths.ProfilesDir, err)
+	}
+
+	return nil
+}
+
 var nameRegex = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
 
 // ProfileStatus represents the state of a profile
@@ -48,6 +65,10 @@ func GetFingerprint(path string) (string, error) {
 
 // withLock executes the given function with a file lock
 func withLock(paths config.Paths, action func() error) error {
+	if err := EnsureInitialized(paths); err != nil {
+		return err
+	}
+
 	lockPath := filepath.Join(paths.CodexDir, ".codex-mp.lock")
 	unlock, err := fs.Lock(lockPath)
 	if err != nil {
@@ -151,46 +172,51 @@ func Rename(oldName, newName string, paths config.Paths) error {
 			return fmt.Errorf("failed to rename profile: %w", err)
 		}
 
-		_ = os.Chmod(newPath, 0600)
+		if err := os.Chmod(newPath, 0600); err != nil {
+			return fmt.Errorf("failed to set permissions on renamed profile: %w", err)
+		}
 		return nil
 	})
 }
 
 // List returns all profiles
 func List(paths config.Paths) ([]ProfileStatus, error) {
-	// active fingerprint (read once)
-	activeFp, _ := GetFingerprint(paths.AuthFile)
-
-	entries, err := os.ReadDir(paths.ProfilesDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []ProfileStatus{}, nil
-		}
-		return nil, fmt.Errorf("failed to list profiles: %w", err)
-	}
-
 	var profiles []ProfileStatus
 
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
-			continue
-		}
+	err := withLock(paths, func() error {
+		// active fingerprint (read inside lock)
+		activeFp, _ := GetFingerprint(paths.AuthFile)
 
-		name := strings.TrimSuffix(entry.Name(), ".json")
-		fullPath := filepath.Join(paths.ProfilesDir, entry.Name())
-
-		fp, err := GetFingerprint(fullPath)
+		entries, err := os.ReadDir(paths.ProfilesDir)
 		if err != nil {
-			// Profile might have been deleted concurrently, skip it
-			continue
+			if os.IsNotExist(err) {
+				return nil // Return empty list
+			}
+			return fmt.Errorf("failed to list profiles: %w", err)
 		}
 
-		profiles = append(profiles, ProfileStatus{
-			Name:        name,
-			Fingerprint: fp,
-			Active:      (activeFp != "" && fp == activeFp),
-		})
-	}
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+				continue
+			}
 
-	return profiles, nil
+			name := strings.TrimSuffix(entry.Name(), ".json")
+			fullPath := filepath.Join(paths.ProfilesDir, entry.Name())
+
+			fp, err := GetFingerprint(fullPath)
+			if err != nil {
+				// Profile might have been deleted concurrently, skip it
+				continue
+			}
+
+			profiles = append(profiles, ProfileStatus{
+				Name:        name,
+				Fingerprint: fp,
+				Active:      (activeFp != "" && fp == activeFp),
+			})
+		}
+		return nil
+	})
+
+	return profiles, err
 }
