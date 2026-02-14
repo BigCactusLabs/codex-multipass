@@ -4,3 +4,4 @@ __pycache__/
 *.tar.gz
 .codex-mp.lock
 codex-mp
+.agent/workflows/update-homebrew.md
