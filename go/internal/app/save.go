@@ -2,17 +2,12 @@ package app
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"regexp"
 
 	"github.com/BigCactusLabs/codex-multipass/internal/config"
-	"github.com/BigCactusLabs/codex-multipass/internal/fs"
+	"github.com/BigCactusLabs/codex-multipass/internal/profile"
 	"github.com/BigCactusLabs/codex-multipass/internal/ui"
 	"github.com/spf13/cobra"
 )
-
-var nameRegex = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
 
 var saveCmd = &cobra.Command{
 	Use:   "save <name>",
@@ -23,30 +18,10 @@ var saveCmd = &cobra.Command{
 		}
 		name := args[0]
 
-		if !nameRegex.MatchString(name) {
-			fail("Invalid profile name: %s (allowed: A-Z a-z 0-9 . _ -)", name)
-		}
-
 		paths := config.ResolvePaths()
-
-		// Read Auth - Verify existence only
-		if _, err := os.Stat(paths.AuthFile); os.IsNotExist(err) {
-			fail("Missing auth file: %s. Hint: run 'codex login' first.", paths.AuthFile)
-		}
-
-		// Save Profile
-		profilePath := filepath.Join(paths.ProfilesDir, name+".json")
-
-		// Acquire Lock
-		unlock, err := fs.Lock(filepath.Join(paths.CodexDir, ".codex-mp.lock"))
+		profilePath, err := profile.Save(name, paths)
 		if err != nil {
-			fail("Failed to acquire lock: %v", err)
-		}
-		defer unlock()
-
-		// Atomic Copy (Raw bytes, just like Bash version)
-		if err := fs.AtomicCopy(paths.AuthFile, profilePath, 0600); err != nil {
-			fail("Failed to save profile: %v", err)
+			fail(err.Error())
 		}
 
 		jsonOutput, _ := cmd.Flags().GetBool("json")

@@ -53,14 +53,25 @@ update_file() {
   awk -v version="$VERSION" -v sha="$SHA256" '
     /url "https:\/\/github\.com\/BigCactusLabs\/codex-multipass\/archive\/refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz"/ {
       print "  url \"https://github.com/BigCactusLabs/codex-multipass/archive/refs/tags/v" version ".tar.gz\""
+      found_url = 1
       next
     }
     /sha256 "[0-9a-f]+"/ {
       print "  sha256 \"" sha "\""
+      found_sha = 1
       next
     }
     { print }
-  ' "$target" > "$tmp"
+    END {
+      if (!found_url || !found_sha) {
+        exit 1
+      }
+    }
+  ' "$target" > "$tmp" || {
+    echo "Error: Failed to update $target (pattern not found)" >&2
+    rm -f "$tmp"
+    return 1
+  }
   mv "$tmp" "$target"
 }
 
