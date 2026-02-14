@@ -22,6 +22,7 @@ func Execute() error {
 
 func init() {
 	rootCmd.PersistentFlags().Bool("json", false, "Output in JSON format")
+	rootCmd.SetHelpFunc(helpFunc)
 }
 
 func fail(msg string, args ...any) {
