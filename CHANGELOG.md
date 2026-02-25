@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- CI now builds `codex-mp` before running smoke and battle test scripts.
+- CI shell lint now targets `bash/codex-switch` directly.
+- `bash/codex-switch` now acts as a compatibility wrapper that delegates to `codex-mp`.
+- `make test` wiring and script docs now consistently use `CODEX_MP`.
+
+### Fixed
+- Corrupt storage test expectation now matches runtime behavior when `profiles/` is missing.
+- CLI failure behavior is now testable in unit tests via injected exit handling.
+
+### Removed
+- Removed tracked compiled Python cache artifact from docs tooling.
+
 ## [0.1.3] - 2026-02-13
 
 ### Fixed

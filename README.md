@@ -1,7 +1,10 @@
-# Codex Multipass (codex-mp) v0.1.0
+# Codex Multipass (codex-mp) v0.1.5
 
 `codex-mp` is a local CLI for switching Codex accounts by swapping
 `auth.json` profiles on disk.
+
+`bash/codex-switch` is a compatibility wrapper that delegates to `codex-mp`.
+All profile-switching behavior is implemented in the Go CLI.
 
 ## Quick Start
 
@@ -68,6 +71,10 @@ make build
 # Binary is at ./codex-mp
 ```
 
+If you use legacy automation that calls `codex-switch`, point it at
+`bash/codex-switch`. The wrapper executes `./codex-mp` (building it if
+needed and Go is available) or falls back to an installed `codex-mp`.
+
 ### Homebrew
 
 ```bash
@@ -119,6 +126,10 @@ Switch to a saved profile:
 codex-mp use work
 ```
 
+`codex-mp` tracks the active profile and syncs the latest `auth.json`
+back to that profile before switching. This preserves rotated refresh
+tokens and avoids stale-token switch failures.
+
 ### 4. Interactive Selection (TUI)
 Select a profile from a list:
 ```bash
@@ -158,3 +169,19 @@ To update the Homebrew formula metadata from `VERSION`:
 # Update local placeholder and (optionally) the live tap repo
 ./scripts/update_formula.sh <sha256> [path/to/homebrew-tap]
 ```
+
+## Development
+
+```bash
+# Build
+make build
+
+# Run integration test scripts against local binary
+make test
+
+# Run targeted unit tests
+cd go && go test ./internal/app ./internal/profile
+```
+
+CI builds `codex-mp` first, runs smoke + battle tests with
+`CODEX_MP=./codex-mp`, and runs shell linting on `bash/codex-switch`.
