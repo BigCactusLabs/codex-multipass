@@ -16,12 +16,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+
+      - name: Build Binary
+        run: make build
 
       - name: Run Smoke Tests
-        run: ./tests/smoke.sh
+        run: CODEX_MP=./codex-mp ./tests/smoke.sh
 
       - name: Run Battle Tests
-        run: ./tests/battle.sh
+        run: CODEX_MP=./codex-mp ./tests/battle.sh
 
   lint:
     name: ShellCheck
@@ -31,4 +37,4 @@ jobs:
       - name: Install ShellCheck
         run: sudo apt-get install -y shellcheck
       - name: Run ShellCheck
-        run: shellcheck cli/codex-switch scripts/*.sh tests/*.sh
+        run: shellcheck bash/codex-switch scripts/*.sh tests/*.sh
