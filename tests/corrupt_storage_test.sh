@@ -20,11 +20,8 @@ dd if=/dev/urandom of="$CODEX_HOME/auth.json" bs=1024 count=1 2>/dev/null
 
 echo "Testing: Missing profiles directory"
 rm -rf "$CODEX_HOME/profiles"
-set +e
-"$CODEX_MP" save missing-dir 2>/dev/null
-RET=$?
-set -e
-[[ $RET -ne 0 ]] || { echo "FAIL: Should fail when profiles dir is missing"; exit 1; }
+"$CODEX_MP" save missing-dir
+[[ -f "$CODEX_HOME/profiles/missing-dir.json" ]] || { echo "FAIL: save should recreate missing profiles dir"; exit 1; }
 
 echo "Testing: Profile name with path traversal"
 set +e

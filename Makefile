@@ -12,8 +12,8 @@ build:
 	cd $(GO_DIR) && go build -ldflags "-X github.com/BigCactusLabs/codex-multipass/internal/app.Version=$(shell cat VERSION)" -o ../$(BINARY_NAME) cmd/codex-mp/main.go
 
 test: build
-	CODEX_SWITCH=./$(BINARY_NAME) ./tests/smoke.sh
-	CODEX_SWITCH=./$(BINARY_NAME) ./tests/battle.sh
+	CODEX_MP=./$(BINARY_NAME) ./tests/smoke.sh
+	CODEX_MP=./$(BINARY_NAME) ./tests/battle.sh
 
 clean:
 	rm -f $(BINARY_NAME)
