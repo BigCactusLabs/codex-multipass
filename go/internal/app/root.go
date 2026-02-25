@@ -25,7 +25,14 @@ func init() {
 	rootCmd.SetHelpFunc(helpFunc)
 }
 
+type exitSignal struct {
+	Code int
+}
+
+var exitFunc = os.Exit
+
 func fail(msg string, args ...any) {
 	fmt.Fprintf(os.Stderr, "Error: "+msg+"\n", args...)
-	os.Exit(1)
+	exitFunc(1)
+	panic(exitSignal{Code: 1})
 }

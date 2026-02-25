@@ -1,32 +1,54 @@
 package app
 
 import (
-	"bytes"
-	"os"
 	"testing"
 )
 
-func TestCLI(t *testing.T) {
-	// Setup env
-	tmpDir, _ := os.MkdirTemp("", "codex-cli-test-*")
-	defer os.RemoveAll(tmpDir)
+func runAndCaptureExit(t *testing.T, fn func()) (exitCode int) {
+	t.Helper()
 
-	os.Setenv("CODEX_HOME", tmpDir)
-	defer os.Unsetenv("CODEX_HOME")
+	originalExit := exitFunc
+	exitFunc = func(code int) {
+		panic(exitSignal{Code: code})
+	}
+	defer func() {
+		exitFunc = originalExit
+	}()
 
-	// 1. Save should fail if no auth
-	b := bytes.NewBufferString("")
-	rootCmd.SetOut(b)
-	rootCmd.SetErr(b)
-	rootCmd.SetArgs([]string{"save", "my-profile"})
+	exitCode = -1
+	defer func() {
+		if r := recover(); r != nil {
+			sig, ok := r.(exitSignal)
+			if !ok {
+				panic(r)
+			}
+			exitCode = sig.Code
+		}
+	}()
 
-	// Execute normally exits on failure, so we need to be careful.
-	// In our app, fail() calls os.Exit(1).
-	// For testing, we might want to refactor fail() or just test the logic.
-	// Since we can't easily intercept os.Exit in a unit test without refactoring,
-	// let's assume for now we are testing the happy path and basic wiring.
+	fn()
+	return exitCode
 }
 
-// Note: Testing CLI commands that call os.Exit(1) is hard without refactoring fail().
-// I will skip deep integration testing for now to avoid refactoring the entire CLI structure
-// unless requested, but I've verified the core logic in profile_test.go.
+func TestFailExitsWithCode1(t *testing.T) {
+	code := runAndCaptureExit(t, func() {
+		fail("boom")
+	})
+
+	if code != 1 {
+		t.Fatalf("expected exit code 1, got %d", code)
+	}
+}
+
+func TestSaveWithoutAuthExits(t *testing.T) {
+	t.Setenv("CODEX_HOME", t.TempDir())
+	rootCmd.SetArgs([]string{"save", "my-profile"})
+
+	code := runAndCaptureExit(t, func() {
+		_ = rootCmd.Execute()
+	})
+
+	if code != 1 {
+		t.Fatalf("expected exit code 1, got %d", code)
+	}
+}
