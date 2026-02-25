@@ -27,6 +27,13 @@ func EnsureInitialized(paths config.Paths) error {
 	if err := os.Chmod(paths.ProfilesDir, 0700); err != nil {
 		return fmt.Errorf("failed to set permissions on %s: %w", paths.ProfilesDir, err)
 	}
+	if _, err := os.Stat(paths.ActiveFile); err == nil {
+		if err := os.Chmod(paths.ActiveFile, 0600); err != nil {
+			return fmt.Errorf("failed to set permissions on %s: %w", paths.ActiveFile, err)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("failed to stat %s: %w", paths.ActiveFile, err)
+	}
 
 	return nil
 }
@@ -79,6 +86,104 @@ func withLock(paths config.Paths, action func() error) error {
 	return action()
 }
 
+func readActiveProfile(paths config.Paths) (string, error) {
+	raw, err := os.ReadFile(paths.ActiveFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("failed to read active profile marker: %w", err)
+	}
+
+	name := strings.TrimSpace(string(raw))
+	if name == "" {
+		return "", nil
+	}
+
+	if err := ValidateName(name); err != nil {
+		return "", nil
+	}
+
+	return name, nil
+}
+
+func writeActiveProfile(paths config.Paths, name string) error {
+	if err := ValidateName(name); err != nil {
+		return err
+	}
+
+	dir := filepath.Dir(paths.ActiveFile)
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return fmt.Errorf("failed to create marker directory: %w", err)
+	}
+
+	tmp, err := os.CreateTemp(dir, ".codex-mp-active-*")
+	if err != nil {
+		return fmt.Errorf("failed to create marker temp file: %w", err)
+	}
+	defer os.Remove(tmp.Name())
+	defer tmp.Close()
+
+	if _, err := tmp.WriteString(name + "\n"); err != nil {
+		return fmt.Errorf("failed to write active profile marker: %w", err)
+	}
+
+	if err := tmp.Chmod(0600); err != nil {
+		return fmt.Errorf("failed to set permissions on active profile marker: %w", err)
+	}
+
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("failed to close active profile marker temp file: %w", err)
+	}
+
+	if err := os.Rename(tmp.Name(), paths.ActiveFile); err != nil {
+		return fmt.Errorf("failed to write active profile marker: %w", err)
+	}
+
+	return nil
+}
+
+func clearActiveProfile(paths config.Paths) error {
+	if err := os.Remove(paths.ActiveFile); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to clear active profile marker: %w", err)
+	}
+	return nil
+}
+
+func syncActiveProfile(paths config.Paths, nextName string) error {
+	activeName, err := readActiveProfile(paths)
+	if err != nil {
+		return err
+	}
+	if activeName == "" {
+		return nil
+	}
+	if activeName == nextName {
+		return nil
+	}
+
+	if _, err := os.Stat(paths.AuthFile); os.IsNotExist(err) {
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("failed to read auth file state: %w", err)
+	}
+
+	activePath := filepath.Join(paths.ProfilesDir, activeName+".json")
+	if _, err := os.Stat(activePath); os.IsNotExist(err) {
+		if err := clearActiveProfile(paths); err != nil {
+			return err
+		}
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("failed to read profile %s: %w", activeName, err)
+	}
+
+	if err := fs.AtomicCopy(paths.AuthFile, activePath, 0600); err != nil {
+		return fmt.Errorf("failed to sync active profile %s: %w", activeName, err)
+	}
+	return nil
+}
+
 // Save saves the current auth as a profile
 func Save(name string, paths config.Paths) (string, error) {
 	if err := ValidateName(name); err != nil {
@@ -96,6 +201,10 @@ func Save(name string, paths config.Paths) (string, error) {
 		// Atomic Copy
 		if err := fs.AtomicCopy(paths.AuthFile, profilePath, 0600); err != nil {
 			return fmt.Errorf("failed to save profile: %w", err)
+		}
+
+		if err := writeActiveProfile(paths, name); err != nil {
+			return fmt.Errorf("failed to update active profile marker: %w", err)
 		}
 		return nil
 	})
@@ -117,9 +226,17 @@ func Use(name string, paths config.Paths) error {
 			return fmt.Errorf("profile not found: %s", name)
 		}
 
+		if err := syncActiveProfile(paths, name); err != nil {
+			return err
+		}
+
 		// Atomic Copy
 		if err := fs.AtomicCopy(profilePath, paths.AuthFile, 0600); err != nil {
 			return fmt.Errorf("failed to switch profile: %w", err)
+		}
+
+		if err := writeActiveProfile(paths, name); err != nil {
+			return fmt.Errorf("failed to update active profile marker: %w", err)
 		}
 		return nil
 	})
@@ -141,6 +258,16 @@ func Delete(name string, paths config.Paths) error {
 
 		if err := os.Remove(profilePath); err != nil {
 			return fmt.Errorf("failed to delete profile: %w", err)
+		}
+
+		activeName, err := readActiveProfile(paths)
+		if err != nil {
+			return err
+		}
+		if activeName == name {
+			if err := clearActiveProfile(paths); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
@@ -175,6 +302,16 @@ func Rename(oldName, newName string, paths config.Paths) error {
 		if err := os.Chmod(newPath, 0600); err != nil {
 			return fmt.Errorf("failed to set permissions on renamed profile: %w", err)
 		}
+
+		activeName, err := readActiveProfile(paths)
+		if err != nil {
+			return err
+		}
+		if activeName == oldName {
+			if err := writeActiveProfile(paths, newName); err != nil {
+				return err
+			}
+		}
 		return nil
 	})
 }
@@ -186,6 +323,15 @@ func List(paths config.Paths) ([]ProfileStatus, error) {
 	err := withLock(paths, func() error {
 		// active fingerprint (read inside lock)
 		activeFp, _ := GetFingerprint(paths.AuthFile)
+		activeName, err := readActiveProfile(paths)
+		if err != nil {
+			return err
+		}
+		if activeName != "" {
+			if _, err := os.Stat(filepath.Join(paths.ProfilesDir, activeName+".json")); err != nil {
+				activeName = ""
+			}
+		}
 
 		entries, err := os.ReadDir(paths.ProfilesDir)
 		if err != nil {
@@ -212,7 +358,7 @@ func List(paths config.Paths) ([]ProfileStatus, error) {
 			profiles = append(profiles, ProfileStatus{
 				Name:        name,
 				Fingerprint: fp,
-				Active:      (activeFp != "" && fp == activeFp),
+				Active:      (activeName != "" && name == activeName) || (activeName == "" && activeFp != "" && fp == activeFp),
 			})
 		}
 		return nil

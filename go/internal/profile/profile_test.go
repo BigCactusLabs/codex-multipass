@@ -23,6 +23,7 @@ func setupTest(t *testing.T) (config.Paths, func()) {
 		CodexDir:    tmpDir,
 		AuthFile:    filepath.Join(tmpDir, "auth.json"),
 		ProfilesDir: profilesDir,
+		ActiveFile:  filepath.Join(tmpDir, ".codex-mp-active"),
 	}
 
 	cleanup := func() {
@@ -122,5 +123,143 @@ func TestDelete(t *testing.T) {
 
 	if _, err := os.Stat(pPath); !os.IsNotExist(err) {
 		t.Errorf("file should be gone")
+	}
+}
+
+func TestUseSameProfileDoesNotSyncIntoProfile(t *testing.T) {
+	paths, cleanup := setupTest(t)
+	defer cleanup()
+
+	if err := os.WriteFile(paths.AuthFile, []byte(`{"token":"stable"}`), 0600); err != nil {
+		t.Fatalf("failed to write auth file: %v", err)
+	}
+	if _, err := Save("same", paths); err != nil {
+		t.Fatalf("save failed: %v", err)
+	}
+
+	// Simulate auth being changed outside codex-mp while same profile remains active.
+	if err := os.WriteFile(paths.AuthFile, []byte(`{"token":"temp"}`), 0600); err != nil {
+		t.Fatalf("failed to mutate auth file: %v", err)
+	}
+
+	if err := Use("same", paths); err != nil {
+		t.Fatalf("use failed: %v", err)
+	}
+
+	profileRaw, err := os.ReadFile(filepath.Join(paths.ProfilesDir, "same.json"))
+	if err != nil {
+		t.Fatalf("failed to read profile file: %v", err)
+	}
+	if string(profileRaw) != `{"token":"stable"}` {
+		t.Fatalf("expected profile to remain stable, got %s", string(profileRaw))
+	}
+
+	authRaw, err := os.ReadFile(paths.AuthFile)
+	if err != nil {
+		t.Fatalf("failed to read auth file: %v", err)
+	}
+	if string(authRaw) != `{"token":"stable"}` {
+		t.Fatalf("expected auth to be restored from profile, got %s", string(authRaw))
+	}
+}
+
+func TestUseSyncsActiveProfileBeforeSwitch(t *testing.T) {
+	paths, cleanup := setupTest(t)
+	defer cleanup()
+
+	if err := os.WriteFile(paths.AuthFile, []byte(`{"token":"a-v1"}`), 0600); err != nil {
+		t.Fatalf("failed to write auth file: %v", err)
+	}
+	if _, err := Save("a", paths); err != nil {
+		t.Fatalf("failed to save profile a: %v", err)
+	}
+
+	// Simulate Codex refreshing tokens for the active profile in auth.json.
+	if err := os.WriteFile(paths.AuthFile, []byte(`{"token":"a-v2"}`), 0600); err != nil {
+		t.Fatalf("failed to update auth file: %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(paths.ProfilesDir, "b.json"), []byte(`{"token":"b-v1"}`), 0600); err != nil {
+		t.Fatalf("failed to write profile b: %v", err)
+	}
+
+	if err := Use("b", paths); err != nil {
+		t.Fatalf("use failed: %v", err)
+	}
+
+	aRaw, err := os.ReadFile(filepath.Join(paths.ProfilesDir, "a.json"))
+	if err != nil {
+		t.Fatalf("failed to read synced profile a: %v", err)
+	}
+	if string(aRaw) != `{"token":"a-v2"}` {
+		t.Fatalf("expected profile a to be synced with refreshed auth, got %s", string(aRaw))
+	}
+
+	activeRaw, err := os.ReadFile(paths.ActiveFile)
+	if err != nil {
+		t.Fatalf("failed to read active marker: %v", err)
+	}
+	if got := string(activeRaw); got != "b\n" {
+		t.Fatalf("expected active marker to be b, got %q", got)
+	}
+}
+
+func TestListUsesActiveMarkerWhenFingerprintChanges(t *testing.T) {
+	paths, cleanup := setupTest(t)
+	defer cleanup()
+
+	if err := os.WriteFile(paths.AuthFile, []byte(`{"token":"a-v1"}`), 0600); err != nil {
+		t.Fatalf("failed to write auth file: %v", err)
+	}
+	if _, err := Save("a", paths); err != nil {
+		t.Fatalf("failed to save profile a: %v", err)
+	}
+
+	// Auth rotates and no longer matches the saved profile fingerprint.
+	if err := os.WriteFile(paths.AuthFile, []byte(`{"token":"a-v2"}`), 0600); err != nil {
+		t.Fatalf("failed to rotate auth file: %v", err)
+	}
+
+	profiles, err := List(paths)
+	if err != nil {
+		t.Fatalf("list failed: %v", err)
+	}
+	if len(profiles) != 1 {
+		t.Fatalf("expected 1 profile, got %d", len(profiles))
+	}
+	if !profiles[0].Active {
+		t.Fatalf("expected profile a to still be marked active")
+	}
+}
+
+func TestRenameAndDeleteUpdateActiveMarker(t *testing.T) {
+	paths, cleanup := setupTest(t)
+	defer cleanup()
+
+	if err := os.WriteFile(paths.AuthFile, []byte(`{"token":"x"}`), 0600); err != nil {
+		t.Fatalf("failed to write auth file: %v", err)
+	}
+	if _, err := Save("work", paths); err != nil {
+		t.Fatalf("save failed: %v", err)
+	}
+
+	if err := Rename("work", "office", paths); err != nil {
+		t.Fatalf("rename failed: %v", err)
+	}
+
+	activeRaw, err := os.ReadFile(paths.ActiveFile)
+	if err != nil {
+		t.Fatalf("failed to read active marker after rename: %v", err)
+	}
+	if got := string(activeRaw); got != "office\n" {
+		t.Fatalf("expected active marker office after rename, got %q", got)
+	}
+
+	if err := Delete("office", paths); err != nil {
+		t.Fatalf("delete failed: %v", err)
+	}
+
+	if _, err := os.Stat(paths.ActiveFile); !os.IsNotExist(err) {
+		t.Fatalf("expected active marker to be removed after deleting active profile")
 	}
 }
