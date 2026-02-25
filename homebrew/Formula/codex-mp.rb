@@ -9,7 +9,6 @@ class CodexMp < Formula
 
   depends_on "go" => :build
   depends_on "bash"
-  depends_on "fzf" => :optional
 
   def install
     system "make", "build"
