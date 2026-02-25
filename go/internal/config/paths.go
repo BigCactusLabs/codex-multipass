@@ -11,15 +11,16 @@ type Paths struct {
 	CodexDir    string `json:"codex_dir"`
 	AuthFile    string `json:"auth"`
 	ProfilesDir string `json:"profiles_dir"`
+	ActiveFile  string `json:"-"`
 }
 
 // ResolvePaths determines the runtime paths based on environment variables and defaults.
 func ResolvePaths() Paths {
 	homeDir, _ := os.UserHomeDir()
-	
+
 	// Default: ~/.codex
 	codexDir := filepath.Join(homeDir, ".codex")
-	
+
 	// Override if CODEX_HOME is set
 	envHome := os.Getenv("CODEX_HOME")
 	if envHome != "" {
@@ -31,5 +32,6 @@ func ResolvePaths() Paths {
 		CodexDir:    codexDir,
 		AuthFile:    filepath.Join(codexDir, "auth.json"),
 		ProfilesDir: filepath.Join(codexDir, "profiles"),
+		ActiveFile:  filepath.Join(codexDir, ".codex-mp-active"),
 	}
 }
