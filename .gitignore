@@ -1,7 +1,33 @@
+# OS / editor noise
 .DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python cache / bytecode
 __pycache__/
 *.pyc
-*.tar.gz
-.codex-mp.lock
+*.pyo
+
+# Go caches / test artifacts
+.gocache/
+.gomodcache/
+coverage.out
+*.coverprofile
+*.prof
+*.test
+
+# Build artifacts
 codex-mp
-.agent/workflows/update-homebrew.md
+*.tar.gz
+
+# Local tool state
+.codex-mp.lock
+.agent/
+.claude/
+
+# Local environment files
+.env
+.env.*

@@ -6,7 +6,9 @@ We welcome contributions! The project is written in **Go**.
 
 1.  **Install Go**: 1.23 or later.
 2.  **Install Dependencies**: `make tidy`
-3.  **Run Tests**: `make test`
+3.  **Build**: `make build`
+4.  **Run Integration Tests**: `make test`
+5.  **Run Unit Tests**: `cd go && go test ./internal/app ./internal/profile`
 
 ## Project Structure
 
@@ -17,8 +19,24 @@ We welcome contributions! The project is written in **Go**.
 - `go/internal/config`: Configuration handling.
 - `go/internal/ui`: User interface components.
 - `go/internal/fs`: Atomic file system operations.
-- `bash/`: Original Bash implementation (legacy/reference).
+- `bash/codex-switch`: Compatibility wrapper that delegates to `codex-mp`.
 - `tests/`: Integration tests (Bash scripts).
+
+## Testing Notes
+
+- Integration test scripts read the binary path from `CODEX_MP`.
+- `make test` builds `./codex-mp` and runs smoke + battle scripts against it.
+- Do not commit generated artifacts (for example `__pycache__/` and `*.pyc`).
+- You can run scripts directly, for example:
+  - `CODEX_MP=./codex-mp ./tests/smoke.sh`
+  - `CODEX_MP=./codex-mp ./tests/battle.sh`
+  - `CODEX_MP=./codex-mp ./tests/concurrency_test.sh`
+  - `CODEX_MP=./codex-mp ./tests/corrupt_storage_test.sh`
+
+## CI
+
+- Test job builds `codex-mp`, then runs smoke and battle scripts.
+- Lint job runs `shellcheck bash/codex-switch scripts/*.sh tests/*.sh`.
 
 ## Release Workflow
 
