@@ -193,9 +193,19 @@ func Save(name string, paths config.Paths) (string, error) {
 	profilePath := filepath.Join(paths.ProfilesDir, name+".json")
 
 	err := withLock(paths, func() error {
-		// Check Auth Existence INSIDE lock
-		if _, err := os.Stat(paths.AuthFile); os.IsNotExist(err) {
-			return fmt.Errorf("missing auth file: %s. Hint: run 'codex login' first", paths.AuthFile)
+		if err := ensureFileBackedAuthSupported(paths); err != nil {
+			return err
+		}
+
+		info, err := os.Stat(paths.AuthFile)
+		if os.IsNotExist(err) {
+			return missingAuthFileError(paths)
+		}
+		if err != nil {
+			return fmt.Errorf("failed to read auth file: %w", err)
+		}
+		if info.IsDir() {
+			return fmt.Errorf("auth file is a directory: %s", paths.AuthFile)
 		}
 
 		// Atomic Copy
@@ -221,6 +231,10 @@ func Use(name string, paths config.Paths) error {
 	profilePath := filepath.Join(paths.ProfilesDir, name+".json")
 
 	return withLock(paths, func() error {
+		if err := ensureFileBackedAuthSupported(paths); err != nil {
+			return err
+		}
+
 		// Check Profile Existence INSIDE lock
 		if _, err := os.Stat(profilePath); os.IsNotExist(err) {
 			return fmt.Errorf("profile not found: %s", name)
@@ -240,6 +254,29 @@ func Use(name string, paths config.Paths) error {
 		}
 		return nil
 	})
+}
+
+func CurrentAuthFingerprint(paths config.Paths) (string, error) {
+	if err := ensureFileBackedAuthSupported(paths); err != nil {
+		return "", err
+	}
+
+	info, err := os.Stat(paths.AuthFile)
+	if os.IsNotExist(err) {
+		return "", missingAuthFileError(paths)
+	}
+	if err != nil {
+		return "", fmt.Errorf("failed to read auth file: %w", err)
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("auth file is a directory: %s", paths.AuthFile)
+	}
+
+	fingerprint, err := GetFingerprint(paths.AuthFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to fingerprint auth file: %w", err)
+	}
+	return fingerprint, nil
 }
 
 // Delete removes a profile

@@ -11,6 +11,7 @@ type Paths struct {
 	CodexDir    string `json:"codex_dir"`
 	AuthFile    string `json:"auth"`
 	ProfilesDir string `json:"profiles_dir"`
+	ConfigFile  string `json:"-"`
 	ActiveFile  string `json:"-"`
 }
 
@@ -32,6 +33,7 @@ func ResolvePaths() Paths {
 		CodexDir:    codexDir,
 		AuthFile:    filepath.Join(codexDir, "auth.json"),
 		ProfilesDir: filepath.Join(codexDir, "profiles"),
+		ConfigFile:  filepath.Join(codexDir, "config.toml"),
 		ActiveFile:  filepath.Join(codexDir, ".codex-mp-active"),
 	}
 }

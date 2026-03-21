@@ -16,9 +16,9 @@ var whoCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		paths := config.ResolvePaths()
 
-		fingerprint, err := profile.GetFingerprint(paths.AuthFile)
+		fingerprint, err := profile.CurrentAuthFingerprint(paths)
 		if err != nil {
-			fail("Not logged in (missing %s)", paths.AuthFile)
+			fail("%v", err)
 		}
 
 		jsonOutput, _ := cmd.Flags().GetBool("json")

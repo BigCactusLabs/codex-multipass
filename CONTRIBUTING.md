@@ -25,7 +25,7 @@ We welcome contributions! The project is written in **Go**.
 ## Testing Notes
 
 - Integration test scripts read the binary path from `CODEX_MP`.
-- `make test` builds `./codex-mp` and runs smoke + battle scripts against it.
+- `make test` builds `./codex-mp` and runs smoke, battle, concurrency, and corrupt-storage scripts against it.
 - Do not commit generated artifacts (for example `__pycache__/` and `*.pyc`).
 - You can run scripts directly, for example:
   - `CODEX_MP=./codex-mp ./tests/smoke.sh`
@@ -35,7 +35,7 @@ We welcome contributions! The project is written in **Go**.
 
 ## CI
 
-- Test job builds `codex-mp`, then runs smoke and battle scripts.
+- Test job should build `codex-mp`, then run smoke, battle, concurrency, and corrupt-storage scripts.
 - Lint job runs `shellcheck bash/codex-switch scripts/*.sh tests/*.sh`.
 
 ## Release Workflow

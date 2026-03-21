@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `make test` now runs smoke, battle, concurrency, and corrupt-storage integration scripts.
+- README and contributor docs now explain that `codex-mp` only manages file-backed `auth.json` sessions when Codex is configured to use `cli_auth_credentials_store = "file"`.
+
+### Fixed
+- `save`, `use`, and `who` now fail with actionable guidance when Codex is using the OS credential store instead of `auth.json`.
+- Smoke test negative cases now enforce exit codes instead of silently passing.
+- `make clean` no longer deletes the tracked `go/go.sum` file.
+
 ## [0.1.6] - 2026-02-25
 
 ### Changed

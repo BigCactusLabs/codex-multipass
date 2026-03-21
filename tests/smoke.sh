@@ -9,6 +9,21 @@ CODEX_HOME="$(mktemp -d)"
 export CODEX_HOME
 CODEX_MP="${CODEX_MP:-$SCRIPT_DIR/../codex-mp}"
 
+assert_exit_code() {
+    local expected="$1"
+    shift
+
+    set +e
+    "$@" 2>/dev/null
+    local ret=$?
+    set -e
+
+    [[ $ret -eq $expected ]] || {
+        echo "FAIL: expected exit code $expected, got $ret for: $*" >&2
+        exit 1
+    }
+}
+
 echo "Using temporary CODEX_HOME: $CODEX_HOME"
 
 # Clean up on exit
@@ -32,10 +47,7 @@ echo "Testing: path"
 
 # 3. Save (without auth.json should fail)
 echo "Testing: save (failing case)"
-set +e
-"$CODEX_MP" save test-profile 2>/dev/null
-[[ $? -eq 1 ]]
-set -e
+assert_exit_code 1 "$CODEX_MP" save test-profile
 
 # 4. Save (with auth.json)
 echo "Testing: save"
@@ -72,10 +84,7 @@ echo "Testing: delete"
 
 # 9. Delete (failing case)
 echo "Testing: delete (failing case)"
-set +e
-"$CODEX_MP" delete non-existent 2>/dev/null
-[[ $? -eq 1 ]]
-set -e
+assert_exit_code 1 "$CODEX_MP" delete non-existent
 
 # 10. Rename
 echo "Testing: rename"
@@ -86,17 +95,11 @@ echo "Testing: rename"
 # 11. Rename (failing case - collision)
 echo "Testing: rename (collision)"
 "$CODEX_MP" save hobby
-set +e
-"$CODEX_MP" rename hobby job 2>/dev/null
-[[ $? -eq 1 ]]
-set -e
+assert_exit_code 1 "$CODEX_MP" rename hobby job
 
 # 12. Name validation (new commands)
 echo "Testing: name validation (rename)"
-set +e
-"$CODEX_MP" rename job "invalid name!" 2>/dev/null
-[[ $? -eq 2 ]]
-set -e
+assert_exit_code 1 "$CODEX_MP" rename job "invalid name!"
 
 # 13. JSON output for mutating commands
 echo "Testing: --json save/use/rename/delete"

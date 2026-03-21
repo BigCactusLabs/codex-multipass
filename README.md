@@ -3,6 +3,12 @@
 `codex-mp` is a local CLI for switching Codex accounts by swapping
 `auth.json` profiles on disk.
 
+Current Codex releases can cache credentials in the OS credential store instead
+of `auth.json`. `codex-mp` only manages file-backed sessions. If `codex login status`
+says you are logged in but `auth.json` is missing, set
+`cli_auth_credentials_store = "file"` in `~/.codex/config.toml` (or
+`$CODEX_HOME/config.toml`) and sign in again.
+
 `bash/codex-switch` is a compatibility wrapper that delegates to `codex-mp`.
 All profile-switching behavior is implemented in the Go CLI.
 
@@ -101,7 +107,6 @@ codex-mp help
 Global output flags:
 
 ```bash
-codex-mp --plain <command>
 codex-mp --json <command>
 ```
 
@@ -183,5 +188,6 @@ make test
 cd go && go test ./internal/app ./internal/profile
 ```
 
-CI builds `codex-mp` first, runs smoke + battle tests with
-`CODEX_MP=./codex-mp`, and runs shell linting on `bash/codex-switch`.
+CI builds `codex-mp` first, runs smoke, battle, concurrency, and
+corrupt-storage tests with `CODEX_MP=./codex-mp`, and runs shell
+linting on `bash/codex-switch`.

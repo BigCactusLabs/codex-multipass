@@ -14,7 +14,8 @@ build:
 test: build
 	CODEX_MP=./$(BINARY_NAME) ./tests/smoke.sh
 	CODEX_MP=./$(BINARY_NAME) ./tests/battle.sh
+	CODEX_MP=./$(BINARY_NAME) ./tests/concurrency_test.sh
+	CODEX_MP=./$(BINARY_NAME) ./tests/corrupt_storage_test.sh
 
 clean:
 	rm -f $(BINARY_NAME)
-	rm -f $(GO_DIR)/go.sum

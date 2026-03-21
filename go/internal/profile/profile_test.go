@@ -3,6 +3,7 @@ package profile
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/BigCactusLabs/codex-multipass/internal/config"
@@ -23,6 +24,7 @@ func setupTest(t *testing.T) (config.Paths, func()) {
 		CodexDir:    tmpDir,
 		AuthFile:    filepath.Join(tmpDir, "auth.json"),
 		ProfilesDir: profilesDir,
+		ConfigFile:  filepath.Join(tmpDir, "config.toml"),
 		ActiveFile:  filepath.Join(tmpDir, ".codex-mp-active"),
 	}
 
@@ -261,5 +263,67 @@ func TestRenameAndDeleteUpdateActiveMarker(t *testing.T) {
 
 	if _, err := os.Stat(paths.ActiveFile); !os.IsNotExist(err) {
 		t.Fatalf("expected active marker to be removed after deleting active profile")
+	}
+}
+
+func TestSaveRejectsKeyringCredentialStore(t *testing.T) {
+	paths, cleanup := setupTest(t)
+	defer cleanup()
+
+	if err := os.WriteFile(paths.AuthFile, []byte(`{"token":"x"}`), 0600); err != nil {
+		t.Fatalf("failed to write auth file: %v", err)
+	}
+	if err := os.WriteFile(paths.ConfigFile, []byte("cli_auth_credentials_store = \"keyring\"\n"), 0600); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+
+	_, err := Save("work", paths)
+	if err == nil {
+		t.Fatalf("expected save to fail for keyring-backed auth")
+	}
+	if got := err.Error(); !strings.Contains(got, `cli_auth_credentials_store = "file"`) {
+		t.Fatalf("expected helpful remediation, got %q", got)
+	}
+}
+
+func TestSaveMentionsCredentialStoreWhenAuthFileIsMissing(t *testing.T) {
+	paths, cleanup := setupTest(t)
+	defer cleanup()
+
+	_, err := Save("work", paths)
+	if err == nil {
+		t.Fatalf("expected save to fail without auth.json")
+	}
+	if got := err.Error(); !strings.Contains(got, "codex login status") {
+		t.Fatalf("expected modern credential-store guidance, got %q", got)
+	}
+}
+
+func TestUseRejectsKeyringCredentialStore(t *testing.T) {
+	paths, cleanup := setupTest(t)
+	defer cleanup()
+
+	if err := os.WriteFile(filepath.Join(paths.ProfilesDir, "work.json"), []byte(`{"token":"x"}`), 0600); err != nil {
+		t.Fatalf("failed to write profile: %v", err)
+	}
+	if err := os.WriteFile(paths.ConfigFile, []byte("cli_auth_credentials_store = \"keyring\"\n"), 0600); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+
+	if err := Use("work", paths); err == nil {
+		t.Fatalf("expected use to fail for keyring-backed auth")
+	}
+}
+
+func TestCurrentAuthFingerprintRejectsKeyringCredentialStore(t *testing.T) {
+	paths, cleanup := setupTest(t)
+	defer cleanup()
+
+	if err := os.WriteFile(paths.ConfigFile, []byte("cli_auth_credentials_store = \"keyring\"\n"), 0600); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+
+	if _, err := CurrentAuthFingerprint(paths); err == nil {
+		t.Fatalf("expected who fingerprint lookup to fail for keyring-backed auth")
 	}
 }
