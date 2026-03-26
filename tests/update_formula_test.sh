@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-TARGET_URL="https://github.com/BigCactusLabs/codex-multipass/releases/download/v0.1.6/codex-mp_darwin_arm64.tar.gz"
+TARGET_URL="https://github.com/BigCactusLabs/codex-multipass/releases/download/v0.1.6/codex-multipass-v0.1.6.tar.gz"
 TARGET_SHA256="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 make_fixture_root() {

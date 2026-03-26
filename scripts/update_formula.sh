@@ -8,7 +8,7 @@ FORMULA_FILE="$ROOT_DIR/homebrew/Formula/codex-mp.rb"
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/update_formula.sh <sha256> [tap_dir]
+Usage: scripts/update_formula.sh --url <release_asset_url> --sha256 <sha256> [--tap-dir <path>]
 
 Reads version from VERSION and updates the formula in:
 1. homebrew/Formula/codex-mp.rb (local placeholder)
@@ -25,13 +25,48 @@ USAGE
   exit 1
 }
 
-if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-  usage
-  exit 0
-fi
+URL=""
+SHA256=""
+TAP_DIR=""
 
-SHA256="${1:-}"
-[[ -n "$SHA256" ]] || {
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --url)
+      [[ $# -ge 2 ]] || {
+        usage
+        exit 2
+      }
+      URL="$2"
+      shift 2
+      ;;
+    --sha256)
+      [[ $# -ge 2 ]] || {
+        usage
+        exit 2
+      }
+      SHA256="$2"
+      shift 2
+      ;;
+    --tap-dir)
+      [[ $# -ge 2 ]] || {
+        usage
+        exit 2
+      }
+      TAP_DIR="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      usage
+      exit 2
+      ;;
+  esac
+done
+
+[[ -n "$URL" && -n "$SHA256" ]] || {
   usage
   exit 2
 }
@@ -50,13 +85,13 @@ update_file() {
   local target="$1"
   local tmp
   tmp="$(mktemp "$target.tmp.XXXXXX")"
-  awk -v version="$VERSION" -v sha="$SHA256" '
-    /url "https:\/\/github\.com\/BigCactusLabs\/codex-multipass\/archive\/refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz"/ {
-      print "  url \"https://github.com/BigCactusLabs/codex-multipass/archive/refs/tags/v" version ".tar.gz\""
+  awk -v url="$URL" -v sha="$SHA256" '
+    /^[[:space:]]*url "/ {
+      print "  url \"" url "\""
       found_url = 1
       next
     }
-    /sha256 "[0-9a-f]+"/ {
+    /^[[:space:]]*sha256 "[0-9a-f]+"/ {
       print "  sha256 \"" sha "\""
       found_sha = 1
       next
@@ -80,7 +115,6 @@ update_file "$FORMULA_FILE"
 echo "Updated local formula: $FORMULA_FILE"
 
 # Update tap if provided
-TAP_DIR="${2:-}"
 if [[ -n "$TAP_DIR" ]]; then
   TAP_FORMULA="$TAP_DIR/Formula/codex-mp.rb"
   if [[ -f "$TAP_FORMULA" ]]; then
@@ -91,4 +125,4 @@ if [[ -n "$TAP_DIR" ]]; then
   fi
 fi
 
-echo "Success: Version $VERSION, SHA256 $SHA256"
+echo "Success: Version $VERSION, URL $URL, SHA256 $SHA256"
