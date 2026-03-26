@@ -27,6 +27,7 @@ codex-mp
 .codex-mp.lock
 .agent/
 .claude/
+docs/superpowers/
 
 # Local environment files
 .env
