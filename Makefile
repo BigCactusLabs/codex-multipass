@@ -1,7 +1,7 @@
 BINARY_NAME=codex-mp
 GO_DIR=go
 
-.PHONY: all build test clean tidy
+.PHONY: all build test clean tidy fmt lint unit-test
 
 all: build
 
@@ -19,3 +19,12 @@ test: build
 
 clean:
 	rm -f $(BINARY_NAME)
+
+fmt:
+	cd $(GO_DIR) && gofmt -w .
+
+lint:
+	cd $(GO_DIR) && golangci-lint run
+
+unit-test:
+	cd $(GO_DIR) && go test ./...
