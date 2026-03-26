@@ -1,193 +1,122 @@
-# Codex Multipass (codex-mp) v0.1.6
+<div align="center">
 
-`codex-mp` is a local CLI for switching Codex accounts by swapping
-`auth.json` profiles on disk.
+# Codex Multipass
 
-Current Codex releases can cache credentials in the OS credential store instead
-of `auth.json`. `codex-mp` only manages file-backed sessions. If `codex login status`
-says you are logged in but `auth.json` is missing, set
-`cli_auth_credentials_store = "file"` in `~/.codex/config.toml` (or
-`$CODEX_HOME/config.toml`) and sign in again.
+**Switch Codex accounts in seconds. No logout required.**
 
-`bash/codex-switch` is a compatibility wrapper that delegates to `codex-mp`.
-All profile-switching behavior is implemented in the Go CLI.
+[![Version](https://img.shields.io/badge/version-0.1.6-blue)]()
+[![Go](https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go&logoColor=white)]()
+[![License](https://img.shields.io/badge/license-MIT-green)]()
+
+</div>
+
+---
+
+Juggling multiple Codex accounts? `codex-mp` lets you save, name, and hot-swap login sessions from the command line — like browser profiles, but for your terminal.
+
+> **Heads up:** Codex can cache credentials in the OS keyring instead of `auth.json`. `codex-mp` manages file-backed sessions only. If `codex login status` shows you're logged in but `auth.json` is missing, set `cli_auth_credentials_store = "file"` in `~/.codex/config.toml` and sign in again.
 
 ## Quick Start
 
-### 1. Install
-Choose one:
-- **Homebrew** (Recommended): `brew install BigCactusLabs/tap/codex-mp`
-- **Build from Source**: Run `make build` (Requires [Go 1.23+](https://go.dev/doc/install) installed)
-
-### 2. Usage
-```bash
-# Initialize
-codex-mp init
-
-# Save current session
-codex-mp save work
-
-# Switch (Interactive)
-codex-mp ui
-
-# Switch (Command)
-codex-mp use work
-```
-
-It does not change your repos or tools. It only copies files under your Codex
-state directory.
-
-## Security model
-
-- All data stays local.
-- The CLI never prints token contents.
-- `codex-mp who` prints only a SHA-256 fingerprint of `auth.json`.
-- Atomic writes for `save` and `use` (temporary file + rename).
-- Process lock for profile mutations to avoid concurrent-write races.
-- Permission hardening on every write (fails closed if hardening fails):
-  - `CODEX_DIR` mode `700`
-  - `profiles/` mode `700`
-  - `auth.json` mode `600`
-  - `profiles/*.json` mode `600`
-
-## Paths
-
-By default, Codex state is resolved from:
-
-- `CODEX_DIR=$HOME/.codex`
-- `AUTH=$CODEX_DIR/auth.json`
-- `PROFILES_DIR=$CODEX_DIR/profiles`
-
-If `CODEX_HOME` is set, it overrides the base directory:
-
-```bash
-CODEX_HOME=/custom/path/.codex codex-mp path
-```
-
-## Installation
-
-### From Source (Go)
-
-Prerequisites: Go 1.23+
-
-```bash
-git clone https://github.com/BigCactusLabs/codex-multipass.git
-cd codex-multipass
-make build
-# Binary is at ./codex-mp
-```
-
-If you use legacy automation that calls `codex-switch`, point it at
-`bash/codex-switch`. The wrapper executes `./codex-mp` (building it if
-needed and Go is available) or falls back to an installed `codex-mp`.
-
-### Homebrew
+**Install:**
 
 ```bash
 brew install BigCactusLabs/tap/codex-mp
 ```
 
+Or build from source with [Go 1.23+](https://go.dev/doc/install): `make build`
+
+**Use it:**
+
+```bash
+codex-mp init          # one-time setup
+codex-mp save work     # snapshot current session as "work"
+codex-mp save personal # log into another account, save it too
+codex-mp use work      # swap back instantly
+codex-mp ui            # or pick from an interactive list
+```
+
+That's it. No repos touched, no tools reconfigured — just swaps files under your Codex state directory.
+
 ## Commands
 
-```bash
-codex-mp init
-codex-mp save <name>
-codex-mp use <name>
-codex-mp list
-codex-mp who
-codex-mp path
-codex-mp delete <name>
-codex-mp rename <old> <new>
-codex-mp pick
-codex-mp ui
-codex-mp version
-codex-mp help
-```
+| Command | What it does |
+|---------|-------------|
+| `codex-mp init` | Set up the profiles directory |
+| `codex-mp save <name>` | Snapshot current session as a named profile |
+| `codex-mp use <name>` | Switch to a saved profile |
+| `codex-mp ui` / `pick` | Interactive profile selector (TUI) |
+| `codex-mp list` | Show all saved profiles |
+| `codex-mp who` | Print SHA-256 fingerprint of current auth |
+| `codex-mp rename <old> <new>` | Rename a profile |
+| `codex-mp delete <name>` | Delete a profile |
+| `codex-mp path` | Show resolved Codex state paths |
+| `codex-mp completion <shell>` | Generate shell completions (bash/zsh/fish/powershell) |
+| `codex-mp --json <cmd>` | JSON output for scripting |
 
-Global output flags:
+## Security
 
-```bash
-codex-mp --json <command>
-```
+Your tokens never leave your machine and never get printed to the terminal.
 
-## Usage
+- **Local only** — all data stays on disk, nothing phones home
+- **Atomic writes** — temp file + rename, so a crash can't corrupt your auth
+- **Process locking** — no concurrent-write races
+- **Strict permissions** — directories `700`, auth files `600`, fails closed if hardening fails
+- **Fingerprints, not secrets** — `codex-mp who` shows a SHA-256 hash, never the token itself
 
-### 1. Initialize
-Set up the profiles directory:
-```bash
-codex-mp init
-```
+## Paths
 
-### 2. Save Profile
-Save your current cached login as a profile:
-```bash
-codex login
-codex-mp save work
-```
-
-### 3. Switch Profile
-Switch to a saved profile:
-```bash
-codex-mp use work
-```
-
-`codex-mp` tracks the active profile and syncs the latest `auth.json`
-back to that profile before switching. This preserves rotated refresh
-tokens and avoids stale-token switch failures.
-
-### 4. Interactive Selection (TUI)
-Select a profile from a list:
-```bash
-codex-mp ui
-# or
-codex-mp pick
-```
-
-### 5. Manage Profiles
-List, delete, or rename profiles:
-```bash
-codex-mp list
-codex-mp delete old-work
-codex-mp rename personal home
-```
-
-### 6. Inspect
-Check current auth fingerprint or resolved paths:
-```bash
-codex-mp who
-codex-mp path
-```
-
-### 7. Shell Completion
-Generate completion script for your shell (bash, zsh, fish, powershell):
-```bash
-codex-mp completion zsh > /usr/local/share/zsh/site-functions/_codex-mp
-```
-
-## Release metadata
-
-`VERSION` is the single source of truth for release version.
-
-To update the Homebrew formula metadata from `VERSION`:
+By default Codex state lives at `~/.codex`. Override with `CODEX_HOME`:
 
 ```bash
-# Update local placeholder and (optionally) the live tap repo
-./scripts/update_formula.sh <sha256> [path/to/homebrew-tap]
+CODEX_HOME=/custom/path/.codex codex-mp path
 ```
+
+```
+~/.codex/
+  auth.json          # active session
+  profiles/
+    work.json        # saved profiles
+    personal.json
+```
+
+## How It Works
+
+`codex-mp` tracks which profile is active and syncs the latest `auth.json` back before switching. This means rotated refresh tokens are preserved automatically — no stale-token surprises.
+
+## Installation
+
+### Homebrew (recommended)
+
+```bash
+brew install BigCactusLabs/tap/codex-mp
+```
+
+### From Source
+
+```bash
+git clone https://github.com/BigCactusLabs/codex-multipass.git
+cd codex-multipass
+make build    # requires Go 1.23+
+# binary lands at ./codex-mp
+```
+
+> **Legacy users:** If you have automation calling `codex-switch`, point it at `bash/codex-switch` — it delegates to the Go binary.
 
 ## Development
 
 ```bash
-# Build
-make build
-
-# Run integration test scripts against local binary
-make test
-
-# Run targeted unit tests
-cd go && go test ./internal/app ./internal/profile
+make build                                        # build the binary
+make test                                         # integration tests against local binary
+cd go && go test ./internal/app ./internal/profile # unit tests
 ```
 
-CI builds `codex-mp` first, runs smoke, battle, concurrency, and
-corrupt-storage tests with `CODEX_MP=./codex-mp`, and runs shell
-linting on `bash/codex-switch`.
+CI runs smoke, battle, concurrency, and corrupt-storage tests plus shell linting on every push.
+
+---
+
+<div align="center">
+
+Made by [Big Cactus Labs](https://github.com/BigCactusLabs)
+
+</div>
