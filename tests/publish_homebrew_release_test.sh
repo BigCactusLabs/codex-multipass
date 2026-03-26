@@ -5,7 +5,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 TARGET_TAG="v0.1.6"
-TARGET_RELEASE_URL="https://github.com/BigCactusLabs/codex-multipass/releases/download/v0.1.6/codex-multipass-v0.1.6.tar.gz"
 TARGET_TAP_REPO="BigCactusLabs/tap"
 TARGET_FORMULA="BigCactusLabs/tap/codex-mp"
 FIXED_HEAD_SHA="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
