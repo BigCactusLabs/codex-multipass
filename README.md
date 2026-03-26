@@ -92,6 +92,13 @@ CODEX_HOME=/custom/path/.codex codex-mp path
 brew install BigCactusLabs/tap/codex-mp
 ```
 
+### Maintainer Release Flow
+
+Homebrew publishing is maintained locally, not through GitHub Actions.
+
+For a release, bump `VERSION`, commit the release changes, then run `./scripts/publish_homebrew_release.sh`.
+The script tags the release if needed, uploads a stable tarball asset, updates `BigCactusLabs/tap`, and validates the formula with `brew`.
+
 ### From Source
 
 ```bash

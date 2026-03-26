@@ -40,6 +40,8 @@ We welcome contributions! The project is written in **Go**.
 
 ## Release Workflow
 
-1.  Update `VERSION` file.
-2.  Commit and tag.
-3.  CI will build and release.
+1.  Update `VERSION` and commit the release changes.
+2.  Run `./scripts/publish_homebrew_release.sh` from a clean worktree.
+3.  Verify `brew info BigCactusLabs/tap/codex-mp` and `brew fetch --force --build-from-source BigCactusLabs/tap/codex-mp`.
+
+Do not try to retrofit an old release from a branch with newer unreleased changes; publish from the intended release version or from a detached worktree at the existing tag.
