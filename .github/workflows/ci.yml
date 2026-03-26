@@ -29,6 +29,12 @@ jobs:
       - name: Run Battle Tests
         run: CODEX_MP=./codex-mp ./tests/battle.sh
 
+      - name: Run Concurrency Tests
+        run: CODEX_MP=./codex-mp ./tests/concurrency_test.sh
+
+      - name: Run Corrupt Storage Tests
+        run: CODEX_MP=./codex-mp ./tests/corrupt_storage_test.sh
+
   lint:
     name: ShellCheck
     runs-on: ubuntu-latest
