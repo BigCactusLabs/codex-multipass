@@ -117,6 +117,6 @@ CI runs smoke, battle, concurrency, and corrupt-storage tests plus shell linting
 
 <div align="center">
 
-Made by [Big Cactus Labs](https://github.com/BigCactusLabs)
+Made by [Big Cactus Labs](https://github.com/BigCactusLabs) 🌵
 
 </div>
