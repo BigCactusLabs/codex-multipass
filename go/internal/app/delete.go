@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/BigCactusLabs/codex-multipass/internal/config"
 	"github.com/BigCactusLabs/codex-multipass/internal/profile"
@@ -25,7 +26,13 @@ var deleteCmd = &cobra.Command{
 
 		jsonOutput, _ := cmd.Flags().GetBool("json")
 		if jsonOutput {
-			fmt.Printf(`{"ok":true,"action":"delete","profile":"%s"}`+"\n", name)
+			if err := writeJSON(os.Stdout, map[string]any{
+				"ok":      true,
+				"action":  "delete",
+				"profile": name,
+			}); err != nil {
+				fail("Failed to encode delete result: %v", err)
+			}
 		} else {
 			fmt.Printf("✗ Deleted profile: %s\n", name)
 		}

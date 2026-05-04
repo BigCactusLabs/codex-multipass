@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/BigCactusLabs/codex-multipass/internal/config"
 	"github.com/BigCactusLabs/codex-multipass/internal/profile"
@@ -26,7 +27,14 @@ var renameCmd = &cobra.Command{
 
 		jsonOutput, _ := cmd.Flags().GetBool("json")
 		if jsonOutput {
-			fmt.Printf(`{"ok":true,"action":"rename","old":"%s","new":"%s"}`+"\n", oldName, newName)
+			if err := writeJSON(os.Stdout, map[string]any{
+				"ok":     true,
+				"action": "rename",
+				"old":    oldName,
+				"new":    newName,
+			}); err != nil {
+				fail("Failed to encode rename result: %v", err)
+			}
 		} else {
 			fmt.Printf("→ Renamed: %s → %s\n", oldName, newName)
 		}

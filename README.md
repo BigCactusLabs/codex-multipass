@@ -4,17 +4,17 @@
 
 **Switch Codex accounts in seconds. No logout required.**
 
-[![Version](https://img.shields.io/badge/version-0.1.6-blue)]()
-[![Go](https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go&logoColor=white)]()
+[![Version](https://img.shields.io/badge/version-0.2.0-blue)]()
+[![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go&logoColor=white)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
 </div>
 
 ---
 
-Juggling multiple Codex accounts? `codex-mp` lets you save, name, and hot-swap login sessions from the command line — like browser profiles, but for your terminal.
+Juggling multiple Codex accounts? `codex-mp` lets you save, name, and hot-swap file-backed login sessions from the command line — like browser profiles, but for your terminal.
 
-> **Heads up:** Codex can cache credentials in the OS keyring instead of `auth.json`. `codex-mp` manages file-backed sessions only. If `codex login status` shows you're logged in but `auth.json` is missing, set `cli_auth_credentials_store = "file"` in `~/.codex/config.toml` and sign in again.
+> **Heads up:** Codex supports multiple credential storage modes: `file`, `keyring`, `auto`, and `ephemeral`. `codex-mp` manages file-backed `auth.json` sessions only. Set `cli_auth_credentials_store = "file"` in `~/.codex/config.toml`, then sign in again before saving profiles. Keyring-backed profile storage is intentionally out of scope for this release.
 
 ## Quick Start
 
@@ -24,7 +24,7 @@ Juggling multiple Codex accounts? `codex-mp` lets you save, name, and hot-swap l
 brew install BigCactusLabs/tap/codex-mp
 ```
 
-Or build from source with [Go 1.23+](https://go.dev/doc/install): `make build`
+Or build from source with [Go 1.25+](https://go.dev/doc/install): `make build`
 
 **Use it:**
 
@@ -33,6 +33,7 @@ codex-mp init          # one-time setup
 codex-mp save work     # snapshot current session as "work"
 codex-mp save personal # log into another account, save it too
 codex-mp use work      # swap back instantly
+codex-mp doctor        # verify Codex is using file-backed auth
 codex-mp ui            # or pick from an interactive list
 ```
 
@@ -51,6 +52,7 @@ That's it. No repos touched, no tools reconfigured — just swaps files under yo
 | `codex-mp rename <old> <new>` | Rename a profile |
 | `codex-mp delete <name>` | Delete a profile |
 | `codex-mp path` | Show resolved Codex state paths |
+| `codex-mp doctor` | Check Codex auth/profile compatibility |
 | `codex-mp completion <shell>` | Generate shell completions (bash/zsh/fish/powershell) |
 | `codex-mp --json <cmd>` | JSON output for scripting |
 
@@ -75,6 +77,7 @@ CODEX_HOME=/custom/path/.codex codex-mp path
 ```
 ~/.codex/
   auth.json          # active session
+  config.toml        # set cli_auth_credentials_store = "file"
   profiles/
     work.json        # saved profiles
     personal.json
@@ -83,6 +86,8 @@ CODEX_HOME=/custom/path/.codex codex-mp path
 ## How It Works
 
 `codex-mp` tracks which profile is active and syncs the latest `auth.json` back before switching. This means rotated refresh tokens are preserved automatically — no stale-token surprises.
+
+If Codex is configured with `keyring`, `auto`, or `ephemeral`, profile commands fail with remediation instead of guessing where credentials live. `auto` is rejected because Codex may use the OS keyring when available and fall back to `auth.json` only on failure; that ambiguity is not safe for a profile switcher.
 
 ## Installation
 
@@ -104,7 +109,7 @@ The script tags the release if needed, uploads a stable tarball asset, updates `
 ```bash
 git clone https://github.com/BigCactusLabs/codex-multipass.git
 cd codex-multipass
-make build    # requires Go 1.23+
+make build    # requires Go 1.25+
 # binary lands at ./codex-mp
 ```
 
@@ -115,10 +120,11 @@ make build    # requires Go 1.23+
 ```bash
 make build                                        # build the binary
 make test                                         # integration tests against local binary
-cd go && go test ./internal/app ./internal/profile # unit tests
+make unit-test                                    # Go unit tests
+shellcheck bash/codex-switch scripts/*.sh tests/*.sh
 ```
 
-CI runs smoke, battle, concurrency, and corrupt-storage tests plus shell linting on every push.
+CI runs Go unit tests, smoke, battle, concurrency, and corrupt-storage tests plus shell and Go linting on every push.
 
 ---
 

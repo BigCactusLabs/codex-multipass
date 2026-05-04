@@ -31,16 +31,7 @@ var pathCmd = &cobra.Command{
 
 		if !isTerminal {
 			// Plain output for scripts
-			// echo "CODEX_HOME=${CODEX_HOME:-}"
-			// echo "CODEX_DIR=$CODEX_DIR"
-			// echo "AUTH=$AUTH"
-			// echo "PROFILES_DIR=$PROFILES_DIR"
-
-			valHome := paths.CodexHome
-			if valHome == "" {
-				// Bash logic: ${CODEX_HOME:-} prints empty if not set
-			}
-			fmt.Printf("CODEX_HOME=%s\n", valHome)
+			fmt.Printf("CODEX_HOME=%s\n", paths.CodexHome)
 			fmt.Printf("CODEX_DIR=%s\n", paths.CodexDir)
 			fmt.Printf("AUTH=%s\n", paths.AuthFile)
 			fmt.Printf("PROFILES_DIR=%s\n", paths.ProfilesDir)

@@ -7,12 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-04
+
+### Added
+- Added repo-local `AGENTS.md` with Codex-specific build, test, lint, and credential-handling guidance.
+- Added `codex-mp doctor` and JSON doctor output for checking Codex auth/profile compatibility.
+
 ### Changed
 - `make test` now runs smoke, battle, concurrency, and corrupt-storage integration scripts.
 - README and contributor docs now explain that `codex-mp` only manages file-backed `auth.json` sessions when Codex is configured to use `cli_auth_credentials_store = "file"`.
+- JSON command output now uses structured encoding instead of hand-built strings.
+- Go module dependencies are refreshed, the module now targets Go 1.25+, and CI uses current checkout/setup-go/golangci-lint actions.
+- `make lint` now runs ShellCheck and a pinned `golangci-lint` v2.12.1.
 
 ### Fixed
-- `save`, `use`, and `who` now fail with actionable guidance when Codex is using the OS credential store instead of `auth.json`.
+- `save`, `use`, and `who` now fail with actionable guidance when Codex is configured for `keyring`, `auto`, or `ephemeral` credential storage instead of explicit file-backed `auth.json`.
 - Smoke test negative cases now enforce exit codes instead of silently passing.
 - `make clean` no longer deletes the tracked `go/go.sum` file.
 

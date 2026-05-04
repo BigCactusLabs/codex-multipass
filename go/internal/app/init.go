@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/BigCactusLabs/codex-multipass/internal/config"
 	"github.com/BigCactusLabs/codex-multipass/internal/profile"
@@ -20,7 +21,13 @@ var initCmd = &cobra.Command{
 
 		jsonOutput, _ := cmd.Flags().GetBool("json")
 		if jsonOutput {
-			fmt.Printf(`{"ok":true,"action":"init","profiles_dir":"%s"}`+"\n", paths.ProfilesDir)
+			if err := writeJSON(os.Stdout, map[string]any{
+				"ok":           true,
+				"action":       "init",
+				"profiles_dir": paths.ProfilesDir,
+			}); err != nil {
+				fail("Failed to encode init result: %v", err)
+			}
 		} else {
 			fmt.Printf("✓ Initialized profiles directory: %s\n", paths.ProfilesDir)
 		}

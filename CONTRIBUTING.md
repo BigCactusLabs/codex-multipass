@@ -4,11 +4,12 @@ We welcome contributions! The project is written in **Go**.
 
 ## Development Setup
 
-1.  **Install Go**: 1.23 or later.
+1.  **Install Go**: 1.25 or later.
 2.  **Install Dependencies**: `make tidy`
 3.  **Build**: `make build`
 4.  **Run Integration Tests**: `make test`
-5.  **Run Unit Tests**: `cd go && go test ./internal/app ./internal/profile`
+5.  **Run Unit Tests**: `make unit-test`
+6.  **Run Lints**: `make lint` and `shellcheck bash/codex-switch scripts/*.sh tests/*.sh`
 
 ## Project Structure
 
@@ -26,6 +27,7 @@ We welcome contributions! The project is written in **Go**.
 
 - Integration test scripts read the binary path from `CODEX_MP`.
 - `make test` builds `./codex-mp` and runs smoke, battle, concurrency, and corrupt-storage scripts against it.
+- Tests must use temporary `CODEX_HOME` directories. Never point tests at a real `~/.codex`.
 - Do not commit generated artifacts (for example `__pycache__/` and `*.pyc`).
 - You can run scripts directly, for example:
   - `CODEX_MP=./codex-mp ./tests/smoke.sh`
@@ -35,8 +37,15 @@ We welcome contributions! The project is written in **Go**.
 
 ## CI
 
-- Test job should build `codex-mp`, then run smoke, battle, concurrency, and corrupt-storage scripts.
+- Test job should run Go unit tests, build `codex-mp`, then run smoke, battle, concurrency, and corrupt-storage scripts.
 - Lint job runs `shellcheck bash/codex-switch scripts/*.sh tests/*.sh`.
+- Go lint runs `golangci-lint` from the GitHub Action.
+
+## Codex Compatibility
+
+- `codex-mp` supports file-backed Codex auth only. The supported config is `cli_auth_credentials_store = "file"` in `~/.codex/config.toml`.
+- `keyring`, `auto`, and `ephemeral` credential modes must fail closed with actionable guidance.
+- Keyring-backed profile storage needs a separate design because it changes the storage backend, profile index, migration story, and cross-platform test matrix.
 
 ## Release Workflow
 

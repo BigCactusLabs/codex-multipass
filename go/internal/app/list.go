@@ -1,7 +1,6 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -27,7 +26,9 @@ var listCmd = &cobra.Command{
 				"ok":       true,
 				"profiles": profiles,
 			}
-			json.NewEncoder(os.Stdout).Encode(out)
+			if err := writeJSON(os.Stdout, out); err != nil {
+				fail("Failed to encode list result: %v", err)
+			}
 		} else {
 			fmt.Println("")
 			fmt.Println("  Profiles")

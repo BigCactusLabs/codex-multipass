@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -14,7 +15,12 @@ var versionCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		jsonOutput, _ := cmd.Flags().GetBool("json")
 		if jsonOutput {
-			fmt.Printf(`{"ok":true,"version":"%s"}`+"\n", Version)
+			if err := writeJSON(os.Stdout, map[string]any{
+				"ok":      true,
+				"version": Version,
+			}); err != nil {
+				fail("Failed to encode version result: %v", err)
+			}
 		} else {
 			fmt.Println(Version)
 		}

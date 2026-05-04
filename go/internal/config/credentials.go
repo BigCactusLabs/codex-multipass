@@ -10,10 +10,11 @@ import (
 type CredentialStore string
 
 const (
-	CredentialStoreUnknown CredentialStore = ""
-	CredentialStoreAuto    CredentialStore = "auto"
-	CredentialStoreFile    CredentialStore = "file"
-	CredentialStoreKeyring CredentialStore = "keyring"
+	CredentialStoreUnknown   CredentialStore = ""
+	CredentialStoreAuto      CredentialStore = "auto"
+	CredentialStoreFile      CredentialStore = "file"
+	CredentialStoreKeyring   CredentialStore = "keyring"
+	CredentialStoreEphemeral CredentialStore = "ephemeral"
 )
 
 var credentialStorePattern = regexp.MustCompile(`^\s*cli_auth_credentials_store\s*=\s*(?:"([^"]+)"|'([^']+)')`)
@@ -26,7 +27,9 @@ func ResolveCredentialStore(paths Paths) (CredentialStore, error) {
 		}
 		return CredentialStoreUnknown, err
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	scanner := bufio.NewScanner(file)
 	inSection := false
@@ -54,7 +57,7 @@ func ResolveCredentialStore(paths Paths) (CredentialStore, error) {
 		}
 
 		switch CredentialStore(value) {
-		case CredentialStoreAuto, CredentialStoreFile, CredentialStoreKeyring:
+		case CredentialStoreAuto, CredentialStoreFile, CredentialStoreKeyring, CredentialStoreEphemeral:
 			return CredentialStore(value), nil
 		default:
 			return CredentialStoreUnknown, nil

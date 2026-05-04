@@ -1,7 +1,7 @@
 package app
 
 import (
-	"fmt"
+	"os"
 
 	"github.com/BigCactusLabs/codex-multipass/internal/config"
 	"github.com/BigCactusLabs/codex-multipass/internal/profile"
@@ -26,7 +26,14 @@ var saveCmd = &cobra.Command{
 
 		jsonOutput, _ := cmd.Flags().GetBool("json")
 		if jsonOutput {
-			fmt.Printf(`{"ok":true,"action":"save","profile":"%s","path":"%s"}`+"\n", name, profilePath)
+			if err := writeJSON(os.Stdout, map[string]any{
+				"ok":      true,
+				"action":  "save",
+				"profile": name,
+				"path":    profilePath,
+			}); err != nil {
+				fail("Failed to encode save result: %v", err)
+			}
 		} else {
 			ui.Success("Saved profile: %s", name)
 		}

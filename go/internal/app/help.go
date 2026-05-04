@@ -50,10 +50,10 @@ func helpFunc(cmd *cobra.Command, args []string) {
 	// Usage
 	b.WriteString(headerStyle.Render("USAGE") + "\n")
 	if cmd.Runnable() {
-		b.WriteString(fmt.Sprintf("  %s\n", cmd.UseLine()))
+		fmt.Fprintf(&b, "  %s\n", cmd.UseLine())
 	}
 	if cmd.HasAvailableSubCommands() {
-		b.WriteString(fmt.Sprintf("  %s [command]\n", cmd.CommandPath()))
+		fmt.Fprintf(&b, "  %s [command]\n", cmd.CommandPath())
 	}
 
 	// Subcommands
@@ -80,7 +80,7 @@ func helpFunc(cmd *cobra.Command, args []string) {
 			cmdName := commandStyle.Render(c.Name())
 			desc := descStyle.Render(c.Short)
 
-			b.WriteString(fmt.Sprintf("  %s%s%s\n", cmdName, pad, desc))
+			fmt.Fprintf(&b, "  %s%s%s\n", cmdName, pad, desc)
 		}
 	}
 

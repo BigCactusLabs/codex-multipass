@@ -61,7 +61,9 @@ func GetFingerprint(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	hasher := sha256.New()
 	if _, err := io.Copy(hasher, f); err != nil {
@@ -121,8 +123,14 @@ func writeActiveProfile(paths config.Paths, name string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create marker temp file: %w", err)
 	}
-	defer os.Remove(tmp.Name())
-	defer tmp.Close()
+	tmpName := tmp.Name()
+	tmpClosed := false
+	defer func() {
+		_ = os.Remove(tmpName)
+		if !tmpClosed {
+			_ = tmp.Close()
+		}
+	}()
 
 	if _, err := tmp.WriteString(name + "\n"); err != nil {
 		return fmt.Errorf("failed to write active profile marker: %w", err)
@@ -135,8 +143,9 @@ func writeActiveProfile(paths config.Paths, name string) error {
 	if err := tmp.Close(); err != nil {
 		return fmt.Errorf("failed to close active profile marker temp file: %w", err)
 	}
+	tmpClosed = true
 
-	if err := os.Rename(tmp.Name(), paths.ActiveFile); err != nil {
+	if err := os.Rename(tmpName, paths.ActiveFile); err != nil {
 		return fmt.Errorf("failed to write active profile marker: %w", err)
 	}
 

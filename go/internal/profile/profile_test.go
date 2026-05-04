@@ -29,7 +29,7 @@ func setupTest(t *testing.T) (config.Paths, func()) {
 	}
 
 	cleanup := func() {
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir)
 	}
 
 	return paths, cleanup
@@ -82,8 +82,12 @@ func TestUseAndRename(t *testing.T) {
 	p1Path := filepath.Join(paths.ProfilesDir, "p1.json")
 	p2Path := filepath.Join(paths.ProfilesDir, "p2.json")
 
-	os.WriteFile(p1Path, []byte(auth1), 0600)
-	os.WriteFile(p2Path, []byte(auth2), 0600)
+	if err := os.WriteFile(p1Path, []byte(auth1), 0600); err != nil {
+		t.Fatalf("failed to write p1 profile: %v", err)
+	}
+	if err := os.WriteFile(p2Path, []byte(auth2), 0600); err != nil {
+		t.Fatalf("failed to write p2 profile: %v", err)
+	}
 
 	// 2. Use p1
 	err := Use("p1", paths)
@@ -116,7 +120,9 @@ func TestDelete(t *testing.T) {
 	defer cleanup()
 
 	pPath := filepath.Join(paths.ProfilesDir, "gone.json")
-	os.WriteFile(pPath, []byte("{}"), 0600)
+	if err := os.WriteFile(pPath, []byte("{}"), 0600); err != nil {
+		t.Fatalf("failed to write profile: %v", err)
+	}
 
 	err := Delete("gone", paths)
 	if err != nil {
@@ -286,6 +292,33 @@ func TestSaveRejectsKeyringCredentialStore(t *testing.T) {
 	}
 }
 
+func TestSaveRejectsNonFileCredentialStores(t *testing.T) {
+	t.Parallel()
+
+	tests := []string{"keyring", "auto", "ephemeral"}
+	for _, store := range tests {
+		t.Run(store, func(t *testing.T) {
+			paths, cleanup := setupTest(t)
+			defer cleanup()
+
+			if err := os.WriteFile(paths.AuthFile, []byte(`{"token":"x"}`), 0600); err != nil {
+				t.Fatalf("failed to write auth file: %v", err)
+			}
+			if err := os.WriteFile(paths.ConfigFile, []byte(`cli_auth_credentials_store = "`+store+`"`+"\n"), 0600); err != nil {
+				t.Fatalf("failed to write config file: %v", err)
+			}
+
+			_, err := Save("work", paths)
+			if err == nil {
+				t.Fatalf("expected save to fail for %s-backed auth", store)
+			}
+			if got := err.Error(); !strings.Contains(got, `cli_auth_credentials_store = "file"`) {
+				t.Fatalf("expected helpful file-backed remediation, got %q", got)
+			}
+		})
+	}
+}
+
 func TestSaveMentionsCredentialStoreWhenAuthFileIsMissing(t *testing.T) {
 	paths, cleanup := setupTest(t)
 	defer cleanup()
@@ -325,5 +358,60 @@ func TestCurrentAuthFingerprintRejectsKeyringCredentialStore(t *testing.T) {
 
 	if _, err := CurrentAuthFingerprint(paths); err == nil {
 		t.Fatalf("expected who fingerprint lookup to fail for keyring-backed auth")
+	}
+}
+
+func TestDiagnoseReportsCleanFileBackedState(t *testing.T) {
+	paths, cleanup := setupTest(t)
+	defer cleanup()
+
+	if err := os.WriteFile(paths.ConfigFile, []byte("cli_auth_credentials_store = \"file\"\n"), 0600); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+	if err := os.WriteFile(paths.AuthFile, []byte(`{"token":"x"}`), 0600); err != nil {
+		t.Fatalf("failed to write auth file: %v", err)
+	}
+	if _, err := Save("work", paths); err != nil {
+		t.Fatalf("save failed: %v", err)
+	}
+
+	report, err := Diagnose(paths)
+	if err != nil {
+		t.Fatalf("diagnose failed: %v", err)
+	}
+	if !report.OK {
+		t.Fatalf("expected clean report, got issues: %#v", report.Issues)
+	}
+	if report.CredentialStore != "file" {
+		t.Fatalf("expected file store, got %q", report.CredentialStore)
+	}
+	if report.ActiveProfile != "work" {
+		t.Fatalf("expected active profile work, got %q", report.ActiveProfile)
+	}
+	if !report.AuthFile.Exists || report.AuthFile.IsDir {
+		t.Fatalf("expected auth file to exist as a file: %#v", report.AuthFile)
+	}
+}
+
+func TestDiagnoseReportsUnsupportedCredentialStore(t *testing.T) {
+	paths, cleanup := setupTest(t)
+	defer cleanup()
+
+	if err := os.WriteFile(paths.ConfigFile, []byte("cli_auth_credentials_store = \"auto\"\n"), 0600); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+
+	report, err := Diagnose(paths)
+	if err != nil {
+		t.Fatalf("diagnose failed: %v", err)
+	}
+	if report.OK {
+		t.Fatalf("expected report to include issues for auto credential store")
+	}
+	if len(report.Issues) == 0 {
+		t.Fatalf("expected at least one issue")
+	}
+	if got := report.Issues[0].Message; !strings.Contains(got, "file-backed") {
+		t.Fatalf("expected file-backed guidance, got %q", got)
 	}
 }

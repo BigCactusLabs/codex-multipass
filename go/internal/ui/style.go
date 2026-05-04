@@ -30,17 +30,16 @@ var (
 )
 
 // Emojis for Success
-var successEmojis = []string{
-	"🚀", "✨", "🎉", "🔥", "🌈", "🦄", "🎸", "👾", "🍕", "🍺",
-}
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
+var (
+	successEmojis = []string{
+		"🚀", "✨", "🎉", "🔥", "🌈", "🦄", "🎸", "👾", "🍕", "🍺",
+	}
+	successRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+)
 
 // RandomEmoji returns a random fun emoji
 func RandomEmoji() string {
-	return successEmojis[rand.Intn(len(successEmojis))]
+	return successEmojis[successRand.Intn(len(successEmojis))]
 }
 
 // Success prints a success message with a random emoji

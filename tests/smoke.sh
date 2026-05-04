@@ -14,7 +14,7 @@ assert_exit_code() {
     shift
 
     set +e
-    "$@" 2>/dev/null
+    "$@" >/dev/null 2>&1
     local ret=$?
     set -e
 
@@ -97,11 +97,29 @@ echo "Testing: rename (collision)"
 "$CODEX_MP" save hobby
 assert_exit_code 1 "$CODEX_MP" rename hobby job
 
-# 12. Name validation (new commands)
+# 12. Doctor
+echo "Testing: doctor"
+"$CODEX_MP" doctor
+DOCTOR_JSON=$("$CODEX_MP" --json doctor)
+echo "$DOCTOR_JSON" | grep '"ok":true' > /dev/null
+echo "$DOCTOR_JSON" | grep '"credential_store":"file"' > /dev/null
+
+# 13. Unsupported Codex credential stores
+echo "Testing: unsupported credential stores"
+for store in keyring auto ephemeral; do
+    printf 'cli_auth_credentials_store = "%s"\n' "$store" > "$CODEX_HOME/config.toml"
+    assert_exit_code 1 "$CODEX_MP" save "store-$store"
+    assert_exit_code 1 "$CODEX_MP" use job
+    assert_exit_code 1 "$CODEX_MP" who
+    assert_exit_code 1 "$CODEX_MP" doctor
+done
+printf 'cli_auth_credentials_store = "file"\n' > "$CODEX_HOME/config.toml"
+
+# 14. Name validation (new commands)
 echo "Testing: name validation (rename)"
 assert_exit_code 1 "$CODEX_MP" rename job "invalid name!"
 
-# 13. JSON output for mutating commands
+# 15. JSON output for mutating commands
 echo "Testing: --json save/use/rename/delete"
 echo '{"token": "json-token"}' > "$CODEX_HOME/auth.json"
 SAVE_JSON=$("$CODEX_MP" --json save json-profile)
@@ -120,10 +138,10 @@ DELETE_JSON=$("$CODEX_MP" --json delete json-profile-2)
 echo "$DELETE_JSON" | grep '"action":"delete"' > /dev/null
 [[ ! -f "$CODEX_HOME/profiles/json-profile-2.json" ]]
 
-# 14. version command uses VERSION file
+# 16. version command uses VERSION file
 echo "Testing: version"
 EXPECTED_VERSION=$(tr -d '[:space:]' < "$SCRIPT_DIR/../VERSION")
 ACTUAL_VERSION=$("$CODEX_MP" version)
 [[ "$ACTUAL_VERSION" == "$EXPECTED_VERSION" ]]
 
-echo "Phase 2 smoke tests PASSED!"
+echo "Smoke tests PASSED!"

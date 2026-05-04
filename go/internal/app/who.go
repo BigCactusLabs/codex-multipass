@@ -1,7 +1,6 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -27,7 +26,9 @@ var whoCmd = &cobra.Command{
 				"ok":          true,
 				"fingerprint": fingerprint,
 			}
-			json.NewEncoder(os.Stdout).Encode(out)
+			if err := writeJSON(os.Stdout, out); err != nil {
+				fail("Failed to encode who result: %v", err)
+			}
 		} else {
 			fmt.Println(fingerprint)
 		}

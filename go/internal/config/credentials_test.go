@@ -39,6 +39,11 @@ func TestResolveCredentialStore(t *testing.T) {
 			want:    CredentialStoreAuto,
 		},
 		{
+			name:    "parses ephemeral store",
+			content: "cli_auth_credentials_store = \"ephemeral\"\n",
+			want:    CredentialStoreEphemeral,
+		},
+		{
 			name:    "ignores section scoped keys",
 			content: "[profiles.work]\ncli_auth_credentials_store = \"file\"\n",
 			want:    CredentialStoreUnknown,

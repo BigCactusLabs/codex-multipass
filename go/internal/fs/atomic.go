@@ -23,8 +23,14 @@ func AtomicWriteJSON(path string, data any, perm os.FileMode) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer os.Remove(tmpFile.Name()) // Clean up if something goes wrong before rename
-	defer tmpFile.Close()
+	tmpName := tmpFile.Name()
+	tmpClosed := false
+	defer func() {
+		_ = os.Remove(tmpName)
+		if !tmpClosed {
+			_ = tmpFile.Close()
+		}
+	}()
 
 	enc := json.NewEncoder(tmpFile)
 	enc.SetIndent("", "  ")
@@ -40,8 +46,9 @@ func AtomicWriteJSON(path string, data any, perm os.FileMode) error {
 	if err := tmpFile.Close(); err != nil {
 		return fmt.Errorf("failed to close temp file: %w", err)
 	}
+	tmpClosed = true
 
-	if err := os.Rename(tmpFile.Name(), path); err != nil {
+	if err := os.Rename(tmpName, path); err != nil {
 		return fmt.Errorf("failed to rename temp file: %w", err)
 	}
 
@@ -54,7 +61,9 @@ func AtomicCopy(src, dst string, perm os.FileMode) error {
 	if err != nil {
 		return fmt.Errorf("failed to open source file: %w", err)
 	}
-	defer sourceFile.Close()
+	defer func() {
+		_ = sourceFile.Close()
+	}()
 
 	dir := filepath.Dir(dst)
 
@@ -66,8 +75,14 @@ func AtomicCopy(src, dst string, perm os.FileMode) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
+	tmpName := tmpFile.Name()
+	tmpClosed := false
+	defer func() {
+		_ = os.Remove(tmpName)
+		if !tmpClosed {
+			_ = tmpFile.Close()
+		}
+	}()
 
 	if _, err := io.Copy(tmpFile, sourceFile); err != nil {
 		return fmt.Errorf("failed to copy content: %w", err)
@@ -80,8 +95,9 @@ func AtomicCopy(src, dst string, perm os.FileMode) error {
 	if err := tmpFile.Close(); err != nil {
 		return fmt.Errorf("failed to close temp file: %w", err)
 	}
+	tmpClosed = true
 
-	if err := os.Rename(tmpFile.Name(), dst); err != nil {
+	if err := os.Rename(tmpName, dst); err != nil {
 		return fmt.Errorf("failed to rename temp file: %w", err)
 	}
 
@@ -103,12 +119,12 @@ func Lock(path string) (func(), error) {
 	}
 
 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
-		f.Close()
+		_ = f.Close()
 		return nil, fmt.Errorf("failed to acquire lock: %w", err)
 	}
 
 	return func() {
-		syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
-		f.Close()
+		_ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+		_ = f.Close()
 	}, nil
 }

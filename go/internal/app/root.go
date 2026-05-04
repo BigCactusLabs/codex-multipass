@@ -12,7 +12,9 @@ var rootCmd = &cobra.Command{
 	Short: "Codex Profile Manager",
 	Long:  `A robust CLI for managing and switching Codex authentication profiles.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+		if err := cmd.Help(); err != nil {
+			fail("%v", err)
+		}
 	},
 }
 
