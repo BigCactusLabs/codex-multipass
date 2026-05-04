@@ -4,7 +4,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-TARGET_TAG="v0.1.6"
+TARGET_VERSION="$(tr -d '[:space:]' < "$ROOT_DIR/VERSION")"
+TARGET_TAG="v$TARGET_VERSION"
+TARGET_ASSET="codex-multipass-$TARGET_TAG.tar.gz"
 TARGET_TAP_REPO="BigCactusLabs/tap"
 TARGET_FORMULA="BigCactusLabs/tap/codex-mp"
 FIXED_HEAD_SHA="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
@@ -44,7 +46,7 @@ FAKE_BIN="$ROOT/bin"
 LOG_FILE="$ROOT/invocations.log"
 TAP_DIR="$ROOT/tap"
 
-export LOG_FILE FIXED_HEAD_SHA FIXED_ASSET_SHA256 TAP_DIR
+export LOG_FILE FIXED_HEAD_SHA FIXED_ASSET_SHA256 TAP_DIR TARGET_VERSION
 
 trap 'rm -rf "$ROOT"' EXIT
 
@@ -61,7 +63,9 @@ FIXED_HEAD_SHA="${FIXED_HEAD_SHA:?}"
 printf 'git %s\n' "$*" >>"$LOG_FILE"
 
 args=("$@")
+in_tap=false
 if [[ "${args[0]:-}" == "-C" ]]; then
+  [[ "${args[1]:-}" == "$TAP_DIR" ]] && in_tap=true
   shift 2
   args=("$@")
 fi
@@ -99,6 +103,10 @@ case "${args[0]:-}" in
       echo "unexpected git remote invocation: $*" >&2
       exit 1
     }
+    if [[ "$in_tap" == "true" ]]; then
+      printf 'https://github.com/BigCactusLabs/homebrew-tap\n'
+      exit 0
+    fi
     printf 'https://github.com/BigCactusLabs/codex-multipass.git\n'
     exit 0
     ;;
@@ -147,7 +155,7 @@ if [[ "${1:-}" == "--repository" && "${2:-}" == "BigCactusLabs/tap" ]]; then
 fi
 
 if [[ "${1:-}" == "info" && "${2:-}" == "BigCactusLabs/tap/codex-mp" ]]; then
-  printf 'codex-mp: stable 0.1.6\n'
+  printf 'codex-mp: stable %s\n' "${TARGET_VERSION:-unknown}"
   exit 0
 fi
 
@@ -195,11 +203,18 @@ assert_log_sequence "$LOG_FILE" \
   "git rev-parse origin/main" \
   "git remote get-url origin" \
   "gh release view $TARGET_TAG" \
+  "shasum -a 256" \
   "gh release create $TARGET_TAG" \
   "brew --repository $TARGET_TAP_REPO" \
+  "git -C $TAP_DIR remote get-url origin" \
   "git -C $TAP_DIR status --short" \
   "git -C $TAP_DIR branch --show-current" \
-  "shasum -a 256" \
   "scripts/update_formula.sh" \
   "brew info $TARGET_FORMULA" \
   "brew fetch --force --build-from-source $TARGET_FORMULA"
+
+grep -F "#$TARGET_ASSET" "$LOG_FILE" >/dev/null || {
+  echo "FAIL: release create did not use stable asset name $TARGET_ASSET" >&2
+  cat "$LOG_FILE" >&2
+  exit 1
+}

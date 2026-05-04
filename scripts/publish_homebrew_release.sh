@@ -48,6 +48,16 @@ run_logged() {
   fi
 }
 
+is_tap_remote() {
+  local remote
+  remote="${1%/}"
+
+  [[ "$remote" == "$TAP_REMOTE_HTTPS" ||
+    "$remote" == "${TAP_REMOTE_HTTPS%.git}" ||
+    "$remote" == "$TAP_REMOTE_SSH" ||
+    "$remote" == "${TAP_REMOTE_SSH%.git}" ]]
+}
+
 release_asset_url() {
   printf 'https://github.com/%s/%s/releases/download/%s/%s\n' "$OWNER" "$REPO" "$TAG" "$ASSET_NAME"
 }
@@ -110,13 +120,12 @@ resolve_tap_dirs() {
 prepare_tap_checkout() {
   [[ -d "$TAP_DIR" ]] || die "Tap checkout not found at $TAP_DIR"
 
-  if [[ "$DRY_RUN" != "true" ]]; then
-    local tap_remote tap_status
+  local tap_remote
+  tap_remote="$(git -C "$TAP_DIR" remote get-url origin)"
+  is_tap_remote "$tap_remote" || die "Tap checkout origin must point to $OWNER/homebrew-tap"
 
-    tap_remote="$(git -C "$TAP_DIR" remote get-url origin)"
-    [[ "$tap_remote" == "$TAP_REMOTE_HTTPS" || "$tap_remote" == "$TAP_REMOTE_SSH" ]] || {
-      die "Tap checkout origin must point to $OWNER/homebrew-tap"
-    }
+  if [[ "$DRY_RUN" != "true" ]]; then
+    local tap_status
 
     tap_status="$(git -C "$TAP_DIR" status --short)"
     [[ -z "$tap_status" ]] || die "Tap checkout must be clean before publishing"
@@ -170,7 +179,7 @@ calculate_asset_sha() {
 
 publish_release_asset() {
   if [[ "$RELEASE_EXISTS" == "false" ]]; then
-    run_logged gh release create "$TAG" "$TMP_TARBALL" --repo "$OWNER/$REPO" --title "$TAG" --notes ""
+    run_logged gh release create "$TAG" "$TMP_TARBALL#$ASSET_NAME" --repo "$OWNER/$REPO" --title "$TAG" --notes ""
     return
   fi
 
@@ -180,8 +189,19 @@ publish_release_asset() {
     return
   fi
 
-  gh release view "$TAG" --repo "$OWNER/$REPO" --json assets,targetCommitish >/dev/null
-  die "Existing release asset reconciliation is not implemented yet; inspect the release manually before rerunning."
+  local asset_digest
+  asset_digest="$(gh release view "$TAG" --repo "$OWNER/$REPO" --json assets --jq ".assets[] | select(.name == \"$ASSET_NAME\") | .digest" || true)"
+
+  if [[ "$asset_digest" == "sha256:$ASSET_SHA" ]]; then
+    return
+  fi
+
+  if [[ -z "$asset_digest" ]]; then
+    run_logged gh release upload "$TAG" "$TMP_TARBALL#$ASSET_NAME" --repo "$OWNER/$REPO"
+    return
+  fi
+
+  die "Existing release asset $ASSET_NAME has digest $asset_digest, expected sha256:$ASSET_SHA"
 }
 
 update_formulae() {
@@ -249,10 +269,10 @@ main() {
   check_repo_state
   ensure_release_is_publishable
   prepare_tarball
+  calculate_asset_sha
   publish_release_asset
   resolve_tap_dirs
   prepare_tap_checkout
-  calculate_asset_sha
   update_formulae
   run_validation_or_die
   finalize_tap
