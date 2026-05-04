@@ -159,12 +159,9 @@ ensure_release_is_publishable() {
 }
 
 prepare_tarball() {
-  local tmp_base
-
-  tmp_base="$(mktemp "${TMPDIR:-/tmp}/codex-mp-release.XXXXXX")"
-  TMP_TARBALL="$tmp_base.tar.gz"
-  rm -f "$tmp_base"
-  trap 'rm -f "$TMP_TARBALL"' EXIT
+  TMP_RELEASE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/codex-mp-release.XXXXXX")"
+  TMP_TARBALL="$TMP_RELEASE_DIR/$ASSET_NAME"
+  trap 'rm -rf "$TMP_RELEASE_DIR"' EXIT
 
   if [[ "$DRY_RUN" == "true" ]]; then
     : >"$TMP_TARBALL"
@@ -179,13 +176,13 @@ calculate_asset_sha() {
 
 publish_release_asset() {
   if [[ "$RELEASE_EXISTS" == "false" ]]; then
-    run_logged gh release create "$TAG" "$TMP_TARBALL#$ASSET_NAME" --repo "$OWNER/$REPO" --title "$TAG" --notes ""
+    run_logged gh release create "$TAG" "$TMP_TARBALL" --repo "$OWNER/$REPO" --title "$TAG" --notes ""
     return
   fi
 
   if [[ "$DRY_RUN" == "true" ]]; then
     run_logged gh release view "$TAG" --repo "$OWNER/$REPO" --json assets,targetCommitish
-    run_logged gh release upload "$TAG" "$TMP_TARBALL#$ASSET_NAME" --repo "$OWNER/$REPO"
+    run_logged gh release upload "$TAG" "$TMP_TARBALL" --repo "$OWNER/$REPO"
     return
   fi
 
@@ -197,7 +194,7 @@ publish_release_asset() {
   fi
 
   if [[ -z "$asset_digest" ]]; then
-    run_logged gh release upload "$TAG" "$TMP_TARBALL#$ASSET_NAME" --repo "$OWNER/$REPO"
+    run_logged gh release upload "$TAG" "$TMP_TARBALL" --repo "$OWNER/$REPO"
     return
   fi
 

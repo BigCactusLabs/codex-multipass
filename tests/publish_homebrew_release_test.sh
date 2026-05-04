@@ -213,7 +213,7 @@ assert_log_sequence "$LOG_FILE" \
   "brew info $TARGET_FORMULA" \
   "brew fetch --force --build-from-source $TARGET_FORMULA"
 
-grep -F "#$TARGET_ASSET" "$LOG_FILE" >/dev/null || {
+grep -F "/$TARGET_ASSET --repo" "$LOG_FILE" >/dev/null || {
   echo "FAIL: release create did not use stable asset name $TARGET_ASSET" >&2
   cat "$LOG_FILE" >&2
   exit 1
